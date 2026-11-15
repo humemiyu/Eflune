@@ -1,0 +1,937 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コード進行 MIDI メーカー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&family=IBM+Plex+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f4f0; --ink:#111111; --muted:rgba(17,17,17,.56); --faint:rgba(17,17,17,.38);
+  --line:rgba(17,17,17,.08); --line2:rgba(17,17,17,.14);
+  --card:rgba(255,255,255,.62); --glass:rgba(245,244,240,.55); --field:rgba(255,255,255,.75); --sunk:rgba(17,17,17,.04);
+  --solid:#111111; --solid-ink:#f5f4f0;
+  --a1:#c9c4ff; --a2:#ffd3ea; --a3:#bfe6ff; --a4:#d6fbe9; --a5:#ffe6c9; --aop:.95;
+  --t-bg:#e3e9ff; --t-ink:#27367c; --sd-bg:#dcf4e8; --sd-ink:#1b5a3d; --d-bg:#ffe8d4; --d-ink:#7a3a14; --nd-bg:#f0e3ff; --nd-ink:#5a2b8a;
+  --shadow:0 1px 0 rgba(255,255,255,.7) inset,0 10px 30px -12px rgba(17,17,17,.12);
+  --sans:"IBM Plex Sans","IBM Plex Sans JP","Yu Gothic UI","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",Consolas,"SF Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0e0e10; --ink:#f3f2ee; --muted:rgba(243,242,238,.6); --faint:rgba(243,242,238,.4);
+    --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.18);
+    --card:rgba(255,255,255,.045); --glass:rgba(20,20,23,.6); --field:rgba(255,255,255,.06); --sunk:rgba(255,255,255,.05);
+    --solid:#f3f2ee; --solid-ink:#111111;
+    --a1:#5b4fd6; --a2:#b0457f; --a3:#2f7fb8; --a4:#2b8f6a; --a5:#b0702c; --aop:.42;
+    --t-bg:#1b2a52; --t-ink:#cbd8ff; --sd-bg:#143524; --sd-ink:#c4f0d6; --d-bg:#452a12; --d-ink:#ffd9b8; --nd-bg:#34204f; --nd-ink:#e6d3ff;
+    --shadow:0 1px 0 rgba(255,255,255,.05) inset,0 14px 34px -14px rgba(0,0,0,.6); }
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:92px}
+body{margin:0;background:var(--bg);color:var(--ink);padding-bottom:112px;font-family:var(--sans);font-weight:400;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+.aurora{position:absolute;inset:-20%;pointer-events:none;opacity:var(--aop);filter:blur(46px);
+  background:
+    radial-gradient(34% 44% at 72% 30%,var(--a1) 0,transparent 70%),
+    radial-gradient(30% 40% at 90% 62%,var(--a2) 0,transparent 70%),
+    radial-gradient(28% 40% at 58% 78%,var(--a3) 0,transparent 70%),
+    radial-gradient(22% 30% at 96% 12%,var(--a4) 0,transparent 70%),
+    radial-gradient(20% 28% at 44% 20%,var(--a5) 0,transparent 72%)}
+/* ---- floating nav ---- */
+.nav{position:sticky;top:12px;z-index:30;max-width:1000px;margin:12px auto 0;padding:0 20px}
+.nav .in{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 12px 10px 20px;border-radius:18px;
+  background:var(--glass);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);
+  border:1px solid var(--line);box-shadow:var(--shadow)}
+.brand{font-family:var(--mono);font-size:12px;letter-spacing:.42em;margin-right:auto;white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:999px;padding:3px}
+.seg button{border:0;background:none;min-height:30px;padding:3px 14px;font-size:11.5px;letter-spacing:.06em;color:var(--muted);border-radius:999px}
+.seg button[aria-pressed=true]{background:var(--solid);color:var(--solid-ink)}
+/* ---- form controls ---- */
+select,input[type=text],input[type=search]{font:inherit;font-size:13.5px;padding:7px 12px;border:1px solid var(--line2);
+  border-radius:12px;background:var(--field);color:var(--ink);min-height:38px;max-width:100%}
+select option{background:var(--bg);color:var(--ink)}
+button{font:inherit;cursor:pointer;border-radius:999px;border:1px solid var(--line2);background:transparent;color:var(--ink);
+  padding:7px 16px;font-size:12px;letter-spacing:.06em;min-height:38px;white-space:nowrap;transition:background .15s,color .15s,transform .08s,border-color .15s}
+button:hover{background:var(--sunk)} button:active{transform:scale(.97)}
+button.primary{background:var(--solid);color:var(--solid-ink);border-color:var(--solid);font-family:var(--mono);letter-spacing:.14em;font-size:11.5px}
+button.primary:hover{opacity:.86;background:var(--solid)}
+button.tog[aria-pressed=true]{background:var(--solid);color:var(--solid-ink);border-color:var(--solid)}
+button.icon{width:38px;padding:0;color:var(--muted);font-size:11px}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.tag{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);
+  border:1px solid var(--line2);border-radius:999px;padding:4px 12px;background:var(--sunk)}
+/* ---- hero ---- */
+.hero{position:relative;overflow:hidden;border-radius:28px;border:1px solid var(--line);margin:18px 0 20px;padding:44px 36px 34px;background:var(--card);box-shadow:var(--shadow)}
+.hero>*:not(.aurora){position:relative}
+h1{font-weight:300;font-size:clamp(34px,6.4vw,72px);line-height:1.12;letter-spacing:-.03em;margin:18px 0 14px}
+.lead{color:var(--muted);font-size:15px;max-width:34em;margin:0 0 30px;font-weight:300}
+.stats{display:flex;gap:38px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:20px}
+.stats b{display:block;font-weight:300;font-size:34px;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.stats span{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+/* ---- settings ---- */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);margin-bottom:16px;
+  display:grid;grid-template-columns:1.5fr 1fr 1fr;backdrop-filter:blur(10px)}
+.grp{padding:20px 22px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:12px;min-width:0}
+.grp:first-child{border-left:0}
+.grp h2{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--faint);margin:0;font-weight:400;text-transform:uppercase}
+.sl{display:grid;grid-template-columns:3.4em 1fr 2.8em;gap:10px;align-items:center;font-size:12px;color:var(--muted)}
+.sl output{color:var(--ink);font-weight:300;font-size:20px;letter-spacing:-.02em;text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--ink);min-width:0;height:22px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label.f{font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:4px;min-width:0}
+label.f select{width:100%}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
+/* ---- custom ---- */
+details.custom{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:0 22px;margin-bottom:26px}
+details.custom>summary{cursor:pointer;font-size:14px;padding:15px 0;list-style:none;display:flex;align-items:center;gap:10px}
+details.custom>summary::-webkit-details-marker{display:none}
+details.custom>summary::before{content:"+";font-family:var(--mono);width:22px;height:22px;border:1px solid var(--line2);border-radius:50%;display:grid;place-items:center;font-size:13px}
+details.custom[open]>summary::before{content:"−"}
+.custom .hint{font-size:12px;color:var(--muted)}
+.custom code,.meta code{font-family:var(--mono);font-size:12px}
+.custom .line{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 8px}
+.custom input[type=text]{flex:1 1 260px;font-family:var(--mono)}
+.err{color:#d43b3b;font-size:13px;min-height:1em;padding-bottom:12px}
+/* ---- search + legend ---- */
+#gm{margin-bottom:12px}
+.tools{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+#q{flex:1 1 260px;min-height:46px;border-radius:999px;padding-left:20px}
+.legend{display:flex;gap:6px;flex-wrap:wrap}
+.legend span{padding:3px 11px;border-radius:999px;font-size:11px;letter-spacing:.04em}
+.count{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--faint);margin:0 0 12px;text-transform:uppercase}
+/* ---- chips ---- */
+.ch{display:inline-flex;align-items:center;justify-content:center;min-width:calc(var(--b,1) * 56px);padding:6px 11px;border-radius:999px;
+  font-weight:500;font-size:13.5px;font-variant-numeric:tabular-nums;line-height:1.25;border:1px solid var(--line);transition:transform .12s,box-shadow .12s}
+.t{background:var(--t-bg);color:var(--t-ink)} .sd{background:var(--sd-bg);color:var(--sd-ink)}
+.d{background:var(--d-bg);color:var(--d-ink)} .nd{background:var(--nd-bg);color:var(--nd-ink)}
+.ch.on{transform:translateY(-2px) scale(1.07);box-shadow:0 0 0 1.5px var(--ink),0 8px 18px -6px rgba(17,17,17,.35)}
+.prog{display:flex;flex-wrap:wrap;gap:5px;padding:6px;border:0;background:none;border-radius:16px;min-height:0;text-align:left;white-space:normal;letter-spacing:0}
+.prog:hover{background:var(--sunk)} .prog:active{transform:none}
+/* ---- list ---- */
+details.sec{position:relative;background:var(--card);border:1px solid var(--line);border-radius:24px;margin-bottom:16px;overflow:hidden;box-shadow:var(--shadow)}
+details.sec>summary{position:relative;overflow:hidden;padding:20px 24px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:12px;
+  font-weight:300;font-size:24px;letter-spacing:-.02em}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::before{content:"";position:absolute;right:-6%;top:-90%;width:46%;height:280%;opacity:var(--aop);filter:blur(34px);pointer-events:none;
+  background:radial-gradient(40% 40% at 30% 50%,var(--a1) 0,transparent 70%),radial-gradient(40% 40% at 62% 40%,var(--a2) 0,transparent 70%),radial-gradient(36% 40% at 84% 62%,var(--a3) 0,transparent 70%)}
+details.sec>summary>*{position:relative}
+details.sec>summary .n{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;border:1px solid var(--line2);border-radius:999px;padding:3px 10px;color:var(--muted);background:var(--glass)}
+details.sec>summary::after{content:"+";position:relative;margin-left:auto;font-family:var(--mono);font-size:15px;width:28px;height:28px;border:1px solid var(--line2);border-radius:50%;display:grid;place-items:center;background:var(--glass)}
+details.sec[open]>summary::after{content:"−"}
+.item{border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:minmax(150px,230px) 1fr auto;align-items:center;gap:8px;padding:9px 16px 9px 24px}
+.item:hover{background:var(--sunk)}
+.name{font-size:14.5px;font-weight:500;min-width:0}
+.name small{display:block;font-weight:300;color:var(--muted);font-size:11.5px}
+.acts{display:flex;gap:6px;align-items:center}
+.acts .dl{min-width:68px;background:transparent;color:var(--ink);border-color:var(--line2)}
+.acts .dl:hover{background:var(--solid);color:var(--solid-ink);border-color:var(--solid);opacity:1}
+.detail{padding:12px 24px 16px;background:var(--sunk);font-size:13px;font-weight:300}
+.detail p{margin:0 0 8px}
+.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.meta span{border:1px solid var(--line2);border-radius:999px;padding:1px 10px;font-size:11px;color:var(--muted)}
+.meta code{color:var(--muted);overflow-wrap:anywhere}
+/* ---- notice ---- */
+.notice{background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);margin-top:28px;padding:26px 28px 8px}
+.notice>h2{font-weight:300;font-size:26px;letter-spacing:-.02em;margin:10px 0 18px}
+.notice .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 36px}
+.notice section{border-top:1px solid var(--line);padding:16px 0 12px}
+.notice h3{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:var(--faint);font-weight:400;margin:0 0 8px}
+.notice p,.notice li{font-size:13px;font-weight:300;color:var(--muted);margin:0 0 6px}
+.notice ul{margin:0;padding-left:1.2em}
+.notice .todo{background:var(--d-bg);color:var(--d-ink);border-radius:6px;padding:0 6px;font-weight:500}
+@media (max-width:780px){ .notice{padding:20px 18px 4px;border-radius:22px} .notice .cols{grid-template-columns:1fr} }
+footer{color:var(--faint);font-size:11.5px;margin-top:14px;font-weight:300}
+/* ---- transport ---- */
+#bar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:40;display:flex;gap:8px;align-items:center;overflow:hidden;
+  width:min(600px,calc(100vw - 24px));padding:9px 10px;border-radius:22px;border:1px solid var(--line);
+  background:var(--glass);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);
+  box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 18px 44px -14px rgba(17,17,17,.35)}
+#bar #bplay{background:var(--solid);color:var(--solid-ink);border-color:var(--solid);width:46px;height:46px;border-radius:50%;padding:0;font-size:15px}
+#bar .now{flex:1;min-width:0;text-align:center}
+#bar .now b{display:block;font-weight:500;font-size:13px}
+#bar .now span{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#prog{position:absolute;left:0;bottom:0;height:3px;width:0;background:linear-gradient(90deg,#8f86ff,#ff8fc7,#6fc3ff)}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.hero,.panel{animation:rise .6s cubic-bezier(.2,.7,.2,1) both} .panel{animation-delay:.08s}
+@media (max-width:780px){
+  .wrap,.nav{padding:0 12px}
+  .hero{padding:30px 20px 24px;border-radius:22px} .stats{gap:26px}
+  .panel{grid-template-columns:1fr} .grp{border-left:0;border-top:1px solid var(--line)} .grp:first-child{border-top:0}
+  .row{grid-template-columns:1fr auto;padding:9px 12px 9px 16px}
+  .prog{grid-column:1 / 3;grid-row:2;padding:2px 0 4px}
+  .ch{min-width:calc(var(--b,1) * 46px);font-size:13px;padding:5px 9px}
+  details.sec>summary{font-size:20px;padding:16px 18px}
+  .brand{width:100%;margin:2px 0} #key{flex:1;min-width:0}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none !important;animation:none !important} }
+</style>
+</head>
+<body>
+<div class="nav"><div class="in">
+  <div class="brand">CHORD&nbsp;MIDI</div>
+  <select id="key" aria-label="キー"></select>
+  <div class="seg" role="group" aria-label="表示">
+    <button id="showName" aria-pressed="true">コード</button>
+    <button id="showDeg" aria-pressed="false">ディグリー</button>
+  </div>
+</div></div>
+
+<div class="wrap">
+  <section class="hero">
+    <div class="aurora" aria-hidden="true"></div>
+    <span class="tag">Chord progression → MIDI</span>
+    <h1>コード進行を、<br>ボタン一つで MIDI に。</h1>
+    <p class="lead">名前の付いたコード進行の一覧です。コードを押すと再生、「MIDI」ボタンでそのまま MIDI ファイルを保存できます。</p>
+    <div class="stats">
+      <div><b id="statN">75</b><span>progressions</span></div>
+      <div><b id="statG">16</b><span>genres</span></div>
+      <div><b>12</b><span>keys</span></div>
+      <div><b id="statP">11</b><span>patterns</span></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="設定">
+    <div class="grp">
+      <h2>Playback / 再生</h2>
+      <div class="sl"><span>BPM</span><input id="bpm" type="range" min="40" max="240" value="120" aria-label="BPM"><output id="bpmv">120</output></div>
+      <div class="sl"><span>音量</span><input id="vol" type="range" min="0" max="1" step="0.05" value="0.6" aria-label="音量"><output id="volv">0.6</output></div>
+      <div class="two">
+        <label class="f">バッキングパターン<select id="pattern">
+          <option value="whole">全音符</option><option value="q4" selected>4分刻み</option><option value="e8">8分刻み</option>
+          <option value="s16">16分刻み</option><option value="arpUp">アルペジオ↑</option><option value="arpDown">アルペジオ↓</option>
+          <option value="sync">シンコペーション</option><option value="bossa">ボサノバ風</option><option value="waltz">ワルツ風（3拍子）</option>
+          <option value="shuffle">シャッフル</option><option value="tresillo">トレシーロ</option></select></label>
+        <label class="f">刻みのテンポ<select id="speed"><option value="2">半テンポ</option><option value="1" selected>通常</option><option value="0.5">倍テンポ</option></select></label>
+      </div>
+      <div class="btns">
+        <button id="loop" class="tog" aria-pressed="true">ループ</button>
+        <button id="rand">ランダム再生</button>
+        <button id="stop">■ 停止</button>
+      </div>
+    </div>
+    <div class="grp">
+      <h2>Sound / 音色</h2>
+      <label class="f">コード<select id="inst"></select></label>
+      <div class="two">
+        <label class="f">ベース<select id="bass"><option value="1">あり</option><option value="0">なし</option></select></label>
+        <label class="f">ベースの音色<select id="binst"></select></label>
+      </div>
+    </div>
+    <div class="grp">
+      <h2>Export / MIDI出力</h2>
+      <div class="two">
+        <label class="f">1コードの長さ<select id="barsper"><option value="1">1小節</option><option value="2">2小節</option><option value="0.5">半小節</option></select></label>
+        <label class="f">繰り返し<select id="repeat"><option value="1">1回</option><option value="2">2回</option><option value="4">4回</option></select></label>
+      </div>
+      <div class="btns"><button id="zip" class="primary">全進行を ZIP で保存</button></div>
+    </div>
+  </section>
+
+  <details class="custom">
+    <summary>自分の進行を入力して MIDI にする</summary>
+    <div class="hint">ディグリーで入力（例: <code>IVmaj7 V7 iii7 vi7</code>）。<code>*2</code> で2倍、<code>*0.5</code> で半分の長さ。<code>bVII</code>・<code>#iv°7</code>・<code>V/3</code>（3度ベース）も使えます。</div>
+    <div class="line">
+      <input id="cprog" type="text" value="IVmaj7 V7 iii7 vi7" aria-label="コード進行">
+      <select id="cmode" aria-label="度数の基準"><option value="M">メジャー基準</option><option value="m">マイナー基準</option></select>
+      <button id="cplay">▶ 再生</button><button id="cdl" class="primary">MIDI</button>
+    </div>
+    <button class="prog" id="cchords" aria-label="入力した進行を再生"></button>
+    <div class="err" id="cerr"></div>
+  </details>
+
+  <div class="seg" id="gm" role="group" aria-label="並べ方">
+    <button data-g="genre" aria-pressed="true">ジャンル別</button>
+    <button data-g="cat" aria-pressed="false">分類別</button>
+    <button data-g="start" aria-pressed="false">始まりの度数別</button>
+  </div>
+  <div class="tools">
+    <input id="q" type="search" placeholder="名前・コードで検索（例: 王道, 4536, ブルース, ジャズ）" aria-label="検索">
+    <div class="legend" aria-label="色の意味">
+      <span class="t">トニック</span><span class="sd">サブドミナント</span><span class="d">ドミナント</span><span class="nd">キー外の音を含む</span>
+    </div>
+  </div>
+  <p class="count" id="count"></p>
+  <div id="list"></div>
+  <section class="notice" id="notice" aria-labelledby="noticeTitle">
+    <span class="tag">Notice</span>
+    <h2 id="noticeTitle">ご利用にあたって</h2>
+    <div class="cols">
+      <section>
+        <h3>このサイトについて</h3>
+        <p>よく使われるコード進行を一覧にし、再生と MIDI ファイルの保存ができるツールです。無料で利用できます。</p>
+      </section>
+      <section>
+        <h3>生成した MIDI ファイルの利用</h3>
+        <ul>
+          <li>このサイトで保存した MIDI ファイルは、個人・商用を問わず自由に使えます。クレジット表記も不要です。</li>
+          <li>コード進行そのものは、一般に著作権で保護されないとされています。ただし、メロディ、歌詞、特徴的なリフやアレンジは別です。既存の曲に似せて制作する場合は、ご自身の責任で確認してください。</li>
+        </ul>
+      </section>
+      <section>
+        <h3>曲名の付いたコード進行</h3>
+        <ul>
+          <li>「〇〇進行」のように曲名を使った名前は、その進行が広く知られるきっかけになった曲を示すための通称です。</li>
+          <li>原曲のコードを簡略化した基本形であり、原曲を正確に再現したものではありません。</li>
+          <li>各楽曲の権利者やアーティストと、このサイトとの間に関係はありません。</li>
+        </ul>
+      </section>
+      <section>
+        <h3>内容の正確さ</h3>
+        <ul>
+          <li>進行の名前や呼び方には、人や地域によって違いがあります。</li>
+          <li>ジャンル別の分類は、運営者の判断による目安です。「このジャンルではこの進行を使うべき」という意味ではありません。</li>
+          <li>内容には注意を払っていますが、誤りが含まれる可能性があります。お気づきの点は下記の連絡先までお知らせください。</li>
+        </ul>
+      </section>
+      <section>
+        <h3>再生音と MIDI</h3>
+        <ul>
+          <li>ブラウザで鳴る音は簡易シンセによる確認用で、実際の楽器の音とは異なります。</li>
+          <li>音色は GM 規格の番号として MIDI に書き込まれます。DAW 側で別の音源を割り当てている場合は、そちらが優先されます。</li>
+          <li>スマートフォンで音が出ないときは、消音（マナー）モードを解除してください。</li>
+        </ul>
+      </section>
+      <section>
+        <h3>プライバシー</h3>
+        <ul>
+          <li>再生も MIDI の作成も、すべてお使いのブラウザの中で行われます。入力したコード進行や設定がサーバーに送信されることはありません。</li>
+          <li>フォントの表示に Google Fonts を使用しています。そのため、ページを開く際に IP アドレスなどが Google に送信されます。</li>
+        </ul>
+      </section>
+      <section>
+        <h3>免責</h3>
+        <p>このサイトの利用によって生じた損害について、運営者は責任を負いません。内容は予告なく変更・終了することがあります。</p>
+      </section>
+      <section>
+        <h3>運営者</h3>
+        <p>Eflune</p>
+        <p>連絡先: <a href="https://x.com/EfluneP" target="_blank" rel="noopener noreferrer" style="color:var(--ink)">X（@EfluneP）</a></p>
+      </section>
+    </div>
+  </section>
+  <footer>MIDI: フォーマット1・480PPQ。トラック1=コード、トラック2=ベース。選んだ音色はGM音色番号として書き込まれます（DAW側で別の音源を割り当てている場合はそちらが優先）。再生音は簡易シンセによる目安です。マイナー基準の進行は、選んだキーの平行短調で鳴ります。チップの幅はコードの長さを表します。</footer>
+</div>
+
+<div id="bar" role="group" aria-label="キーと再生">
+  <button id="kprev" class="icon" aria-label="キーを半音下げる">←</button>
+  <div class="now"><b id="bkey"></b><span id="bname">コードを押すと再生します</span></div>
+  <button id="knext" class="icon" aria-label="キーを半音上げる">→</button>
+  <button id="bplay" aria-label="再生 / 停止">▶</button>
+  <div id="prog"></div>
+</div>
+
+<script id="core">
+// ===================== core (DOMなし・Nodeでもテスト可能) =====================
+const PPQ = 480, STEP = PPQ / 4;
+const MAJ = [0,2,4,5,7,9,11], MIN = [0,2,3,5,7,8,10];
+const Q = {
+  "":[0,4,7], "m":[0,3,7], "dim":[0,3,6], "aug":[0,4,8], "sus2":[0,2,7], "sus4":[0,5,7],
+  "6":[0,4,7,9], "m6":[0,3,7,9], "7":[0,4,7,10], "maj7":[0,4,7,11], "m7":[0,3,7,10],
+  "mM7":[0,3,7,11], "m7b5":[0,3,6,10], "dim7":[0,3,6,9], "7sus4":[0,5,7,10],
+  "add9":[0,4,7,14], "madd9":[0,3,7,14], "9":[0,4,7,10,14], "maj9":[0,4,7,11,14],
+  "m9":[0,3,7,10,14], "7b9":[0,4,7,10,13], "7#9":[0,4,7,10,15],
+  "9sus4":[0,5,7,10,14], "13":[0,4,7,10,14,21]
+};
+const ALIAS = {"°":"dim","o":"dim","°7":"dim7","o7":"dim7","ø":"m7b5","ø7":"m7b5","M7":"maj7",
+  "△7":"maj7","M9":"maj9","+":"aug","sus":"sus4","7sus":"7sus4","min":"m","-":"m","-7":"m7"};
+const MINOR_BASE = {"":"m","7":"m7","6":"m6","9":"m9","maj7":"mM7","add9":"madd9"};
+const ROMAN = ["I","II","III","IV","V","VI","VII"];
+const SH = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const FL = ["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
+
+// tonic = その進行の主音（マイナー基準なら短調の主音）。♭系かどうかは調号で決める
+function useFlats(tonic, mode){
+  const majTonic = mode === "m" ? (tonic + 3) % 12 : tonic;
+  return [1,3,5,8,10].includes(majTonic);
+}
+function parseChord(tok, tonic, mode){
+  const m = /^([b#]?)(VII|VI|IV|V|III|II|I|vii|vi|iv|v|iii|ii|i)([^\/]*)(?:\/([357]))?$/.exec(tok);
+  if (!m) throw new Error("読めないコード: " + tok);
+  const [, acc, num, sufRaw, slash] = m;
+  const deg = ROMAN.indexOf(num.toUpperCase());
+  const root = ((tonic + (mode === "m" ? MIN : MAJ)[deg] + (acc === "b" ? -1 : acc === "#" ? 1 : 0)) % 12 + 12) % 12;
+  let q = ALIAS[sufRaw] !== undefined ? ALIAS[sufRaw] : sufRaw;
+  if (num === num.toLowerCase() && MINOR_BASE[q] !== undefined) q = MINOR_BASE[q];
+  if (!Q[q]) throw new Error("知らないコードの種類: " + tok);
+  const ivs = Q[q];
+  let bassPc = root;
+  if (slash){
+    const idx = {"3":1,"5":2,"7":3}[slash];
+    if (ivs[idx] === undefined) throw new Error("そのベース指定は使えません: " + tok);
+    bassPc = (root + ivs[idx]) % 12;
+  }
+  const keyNames = useFlats(tonic, mode) ? FL : SH;
+  const rootName = (acc === "b" ? FL : acc === "#" ? SH : keyNames)[root];
+  return { root, q, ivs, bassPc, slash: !!slash, rootName, bassName: keyNames[bassPc] };
+}
+function parseProg(text, tonic, mode){
+  const out = [];
+  for (const raw of text.trim().split(/[\s|,]+/)){
+    if (!raw || raw === "-") continue;
+    let [tok, d] = raw.split("*");
+    const bars = d === undefined ? 1 : parseFloat(d);
+    if (!(bars > 0)) throw new Error("長さの指定が変です: " + raw);
+    const c = parseChord(tok, tonic, mode);
+    c.bars = bars; c.tok = tok;
+    out.push(c);
+  }
+  if (!out.length) throw new Error("進行が空です");
+  return out;
+}
+function candidates(root, ivs){
+  const res = [], low = 50, high = 79;
+  for (let inv = 0; inv < ivs.length; inv++){
+    const raw = ivs.slice(inv).concat(ivs.slice(0, inv).map(i => i + 12)).sort((a,b) => a - b);
+    const first = (root + raw[0]) % 12;
+    for (let o = 2; o < 8; o++){
+      const v = raw.map(s => first + 12 * o + s - raw[0]);
+      if (v[0] >= low && v[v.length - 1] <= high) res.push({ inv, v });
+    }
+  }
+  if (!res.length) res.push({ inv: 0, v: ivs.map(i => 60 + root - (root > 6 ? 12 : 0) + i) });
+  return res;
+}
+const mean = v => v.reduce((a,b) => a + b, 0) / v.length;
+function dist(a, b){
+  const d = (x, ys) => Math.min(...ys.map(y => Math.abs(x - y)));
+  return a.reduce((s,x) => s + d(x,b), 0) + b.reduce((s,x) => s + d(x,a), 0);
+}
+function voice(chords){
+  let prev = null;
+  for (const c of chords){
+    const cands = candidates(c.root, c.ivs);
+    let pool, score;
+    if (!prev){ pool = cands.filter(k => k.inv === 0); if (!pool.length) pool = cands; score = v => Math.abs(mean(v) - 64); }
+    else { pool = cands; score = v => dist(v, prev) + 0.4 * Math.abs(mean(v) - 64); }
+    c.voicing = pool.map(k => k.v).reduce((best, v) => score(v) < score(best) ? v : best);
+    prev = c.voicing;
+  }
+}
+// バッキングパターン。steps は16分音符のマス目（1小節=16マス）
+const PATTERNS = {
+  whole: {}, q4: { steps: [0,4,8,12] }, e8: { steps: [0,2,4,6,8,10,12,14] },
+  s16: { steps: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15] },
+  arpUp: { arp: 1 }, arpDown: { arp: -1 },
+  sync: { steps: [0,6,10,14] }, bossa: { steps: [0,3,6,10,13], bossaBass: true },
+  waltz: { waltz: true }, shuffle: { shuffle: true }, tresillo: { steps: [0,3,6,8,11,14] },
+};
+// o: {tonic, mode:'M'|'m', bpm, pattern, speed(2=半テンポ,0.5=倍テンポ), bass:bool, repeat, barsPer, chordProg, bassProg}
+function buildSong(prog, o){
+  const chords = parseProg(prog, o.tonic, o.mode);
+  voice(chords);
+  const pat = PATTERNS[o.pattern] || PATTERNS.whole, sc = o.speed || 1;
+  const beats = pat.waltz ? 3 : 4, bar = PPQ * beats;
+  const cn = [], bn = [], timeline = [];
+  let t0 = 0;
+  for (let r = 0; r < (o.repeat || 1); r++){
+    chords.forEach((c, idx) => {
+      const span = Math.round(c.bars * (o.barsPer || 1) * bar);
+      timeline.push({ idx, start: t0, span });
+      const v = c.voicing, b = 36 + c.bassPc;
+      let hits = [], bassHits = [[0, span, b]];
+      if (pat.steps){
+        const unit = STEP * sc, cycle = 16 * unit;
+        for (let base = 0; base < span; base += cycle)
+          for (const s of pat.steps){ const t = base + s * unit; if (t < span) hits.push(t); }
+      } else if (pat.shuffle){
+        const unit = PPQ * sc;
+        for (let t = 0; t < span; t += unit){ hits.push(t); if (t + unit * 2 / 3 < span) hits.push(t + unit * 2 / 3); }
+      } else if (pat.waltz){
+        const unit = PPQ * sc; bassHits = [];
+        for (let base = 0; base < span; base += 3 * unit){
+          bassHits.push([base, Math.min(3 * unit, span - base) * 0.9, b]);
+          for (const k of [1, 2]) if (base + k * unit < span) hits.push(base + k * unit);
+        }
+      } else if (pat.arp){
+        const unit = PPQ / 2 * sc, tones = pat.arp > 0 ? v : v.slice().reverse();
+        let k = 0;
+        for (let t = 0; t < span; t += unit, k++)
+          cn.push([t0 + t, Math.min(unit, span - t) * 0.92, tones[k % tones.length], t % PPQ === 0 ? 90 : 76]);
+      } else hits = [0];
+      if (pat.bossaBass && !c.slash){
+        const unit = PPQ * 2 * sc, fifth = b + (c.ivs[2] === 6 || c.ivs[2] === 8 ? c.ivs[2] : 7) - 12;
+        bassHits = [];
+        for (let t = 0, k = 0; t < span; t += unit, k++)
+          bassHits.push([t, Math.min(unit, span - t) * 0.85, k % 2 ? (fifth < 28 ? fifth + 12 : fifth) : b]);
+      }
+      if (!pat.arp && !hits.length) hits = [0]; // コードが短すぎてパターンが入らないときは頭で1回鳴らす
+      hits.forEach((t, i) => {
+        const len = (i + 1 < hits.length ? hits[i + 1] : span) - t;
+        const gate = hits.length === 1 && t === 0 ? span - 10 : Math.min(len, PPQ * 2) * 0.85;
+        v.forEach(p => cn.push([t0 + t, gate, p, t % PPQ === 0 ? 86 : 72]));
+      });
+      if (o.bass !== false) bassHits.forEach(([t, d, p]) => bn.push([t0 + t, Math.max(10, d - (d === span ? 20 : 0)), p, 96]));
+      t0 += span;
+    });
+  }
+  const gm = (x, d) => Number.isInteger(x) && x >= 0 && x <= 127 ? x : d;
+  const tracks = [{ name: "Chords", ch: 0, prog: gm(o.chordProg, 0), notes: cn }];
+  if (bn.length) tracks.push({ name: "Bass", ch: 1, prog: gm(o.bassProg, 33), notes: bn });
+  return { chords, tracks, timeline, total: t0, bpm: o.bpm || 120, beats };
+}
+function vlq(n){
+  const out = [n & 0x7f]; n >>>= 7;
+  while (n){ out.unshift((n & 0x7f) | 0x80); n >>>= 7; }
+  return out;
+}
+function trackChunk(events, endTick){
+  events.sort((a,b) => a[0] - b[0] || a[1] - b[1]);
+  const body = []; let last = 0;
+  for (const [tick, , data] of events){ body.push(...vlq(tick - last), ...data); last = tick; }
+  body.push(...vlq(Math.max(0, endTick - last)), 0xff, 0x2f, 0x00);
+  const n = body.length;
+  return [0x4d,0x54,0x72,0x6b, (n>>>24)&255, (n>>>16)&255, (n>>>8)&255, n&255, ...body];
+}
+function toMidi(song){
+  const us = Math.round(60000000 / song.bpm);
+  const asc = s => Array.from(s).map(ch => ch.charCodeAt(0) & 0x7f);
+  const meta = (t, d) => [0xff, t, ...vlq(d.length), ...d];
+  const chunks = [trackChunk([
+    [0, 0, meta(0x03, asc("chord progression"))],
+    [0, 0, meta(0x51, [(us>>>16)&255, (us>>>8)&255, us&255])],
+    [0, 0, meta(0x58, [song.beats || 4, 2, 24, 8])]], song.total)];
+  for (const t of song.tracks){
+    const ev = [[0, 0, meta(0x03, asc(t.name))], [0, 0, [0xc0 | t.ch, t.prog]]];
+    for (const [s, d, p, v] of t.notes){
+      const st = Math.max(0, Math.round(s)), en = Math.min(song.total, Math.max(st + 1, Math.round(s + d)));
+      ev.push([st, 1, [0x90 | t.ch, p, v]]);
+      ev.push([en, 0, [0x80 | t.ch, p, 0]]);
+    }
+    chunks.push(trackChunk(ev, song.total));
+  }
+  const head = [0x4d,0x54,0x68,0x64, 0,0,0,6, 0,1, 0,chunks.length, (PPQ>>>8)&255, PPQ&255];
+  return new Uint8Array(head.concat(...chunks));
+}
+// ---- 無圧縮ZIP ----
+const CRC_T = (() => { const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++){ let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+  return t; })();
+function crc32(u8){ let c = 0xffffffff; for (let i = 0; i < u8.length; i++) c = CRC_T[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+function makeZip(files){
+  const enc = new TextEncoder(), parts = [], central = [];
+  const u16 = n => [n & 255, (n >>> 8) & 255], u32 = n => [n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255];
+  const date = ((2026 - 1980) << 9) | (1 << 5) | 1;
+  let offset = 0;
+  for (const f of files){
+    const nm = enc.encode(f.name), crc = crc32(f.data), sz = f.data.length;
+    const common = [...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(date), ...u32(crc), ...u32(sz), ...u32(sz), ...u16(nm.length), ...u16(0)];
+    const local = new Uint8Array([0x50,0x4b,0x03,0x04, ...common, ...nm]);
+    parts.push(local, f.data);
+    central.push(new Uint8Array([0x50,0x4b,0x01,0x02, ...u16(20), ...common, ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(offset), ...nm]));
+    offset += local.length + sz;
+  }
+  const csize = central.reduce((s,c) => s + c.length, 0);
+  const end = new Uint8Array([0x50,0x4b,0x05,0x06, 0,0,0,0, ...u16(files.length), ...u16(files.length), ...u32(csize), ...u32(offset), 0,0]);
+  const all = parts.concat(central, [end]);
+  const out = new Uint8Array(all.reduce((s,c) => s + c.length, 0));
+  let p = 0; for (const c of all){ out.set(c, p); p += c.length; }
+  return out;
+}
+
+// ===================== 名前付きコード進行 =====================
+// m: 'M'=メジャーキー基準, 'm'=マイナーキー基準（ナチュラルマイナーの度数。大文字=メジャーコード）
+const PROGS = [
+ // --- J-POP定番 ---
+ {c:"J-POP定番", n:"王道進行", a:"4536進行", m:"M", p:"IVmaj7 V7 iii7 vi7", d:"J-POP・アニソンの大定番。サビで泣かせる。"},
+ {c:"J-POP定番", n:"王道進行（III7版）", a:"4536のIIIをセブンスに", m:"M", p:"IVmaj7 V7 III7 vi7", d:"iii を III7 にして vi への引力を強めた形。"},
+ {c:"J-POP定番", n:"小室進行", a:"6451進行", m:"M", p:"vi IV V I", d:"90年代J-POPを象徴する、切なさと疾走感のある進行。"},
+ {c:"J-POP定番", n:"カノン進行", a:"パッヘルベルのカノン", m:"M", p:"I V vi iii IV I IV V", d:"8つのコードで一巡。卒業ソングや応援歌の定番。"},
+ {c:"J-POP定番", n:"丸サ進行", a:"Just the Two of Us進行", m:"M", p:"IVmaj7 III7 vi7 v7*0.5 I7*0.5", d:"おしゃれで都会的。シティポップからボカロまで。"},
+ {c:"J-POP定番", n:"サブドミナントマイナー進行", a:"IV→IVm→I", m:"M", p:"IV iv I*2", d:"IV をマイナーにして切なく着地する。"},
+ {c:"J-POP定番", n:"ツーファイブワン", a:"II–V–I / 251", m:"M", p:"ii7 V7 Imaj7*2", d:"最も基本的な解決の流れ。"},
+ {c:"J-POP定番", n:"循環進行", a:"イチロクニーゴー / 1625", m:"M", p:"Imaj7 vi7 ii7 V7", d:"何度でも回せる循環コード。"},
+ {c:"J-POP定番", n:"逆循環進行", a:"2516進行", m:"M", p:"ii7 V7 Imaj7 vi7", d:"ツーファイブから始める循環。"},
+ {c:"J-POP定番", n:"3625進行", a:"サンロクニーゴー", m:"M", p:"iii7 vi7 ii7 V7", d:"4度進行でなめらかにつながる。"},
+ {c:"J-POP定番", n:"2536進行", a:"王道進行の親戚", m:"M", p:"ii7 V7 iii7 vi7", d:"王道進行の IV を ii に置き換えた形。"},
+ // --- 数字で呼ぶ進行 ---
+ {c:"数字で呼ぶ進行", n:"1564進行", a:"Let It Be進行 / ポップパンク進行", m:"M", p:"I V vi IV", d:"世界で最も使われる4コード。"},
+ {c:"数字で呼ぶ進行", n:"6415進行", a:"センシティブ・フィメール進行", m:"M", p:"vi IV I V", d:"1564 を vi から始めた形。エモーショナル。"},
+ {c:"数字で呼ぶ進行", n:"1645進行", a:"50s進行 / ドゥーワップ進行 / Stand by Me進行", m:"M", p:"I vi IV V", d:"オールディーズの定番。"},
+ {c:"数字で呼ぶ進行", n:"4156進行", a:"", m:"M", p:"IV I V vi", d:"IV から始まり vi に落ちる、浮遊感のある4コード。"},
+ {c:"数字で呼ぶ進行", n:"4561進行", a:"", m:"M", p:"IV V vi I", d:"上がっていって主和音に着地。"},
+ {c:"数字で呼ぶ進行", n:"456進行", a:"IV–V–VIm", m:"M", p:"IV V vi*2", d:"ユーロビートやアニソンで多用される上昇。"},
+ {c:"数字で呼ぶ進行", n:"1465進行", a:"", m:"M", p:"I IV vi V", d:"明るく素直なポップス進行。"},
+ {c:"数字で呼ぶ進行", n:"1345進行", a:"", m:"M", p:"I iii IV V", d:"iii を挟んでゆっくり盛り上がる。"},
+ {c:"数字で呼ぶ進行", n:"1234進行", a:"順次上昇", m:"M", p:"I ii iii IV", d:"ダイアトニックを順番に上がる。"},
+ {c:"数字で呼ぶ進行", n:"4321進行", a:"順次下降", m:"M", p:"IV iii ii I", d:"ダイアトニックを順番に下がる。"},
+ {c:"数字で呼ぶ進行", n:"スリーコード", a:"145", m:"M", p:"I IV V I", d:"主要三和音だけの基本形。"},
+ // --- 洋楽・ロック ---
+ {c:"洋楽・ロック", n:"La Bamba進行", a:"Twist and Shout進行", m:"M", p:"I IV V IV", d:"ロックンロールの定番リフ進行。"},
+ {c:"洋楽・ロック", n:"Louie Louie進行", a:"", m:"M", p:"I IV v IV", d:"V をマイナーにしたガレージロックの定番。"},
+ {c:"洋楽・ロック", n:"ミクソリディアン進行", a:"I–♭VII–IV", m:"M", p:"I bVII IV I", d:"♭VII を使ったロックらしい響き。"},
+ {c:"洋楽・ロック", n:"Creep進行", a:"I–III–IV–IVm", m:"M", p:"I III IV iv", d:"III と IVm が効いた気だるい進行。"},
+ {c:"洋楽・ロック", n:"Hotel California進行", a:"", m:"m", p:"i V VII IV VI III iv V", d:"8小節のマイナー名進行。"},
+ {c:"洋楽・ロック", n:"Get Lucky進行", a:"ドリアン系4コード", m:"m", p:"i III v IV", d:"ファンク・ディスコの循環。"},
+ {c:"洋楽・ロック", n:"見張り塔進行", a:"All Along the Watchtower進行", m:"m", p:"i VII VI VII", d:"マイナーロックの定番の行き来。"},
+ {c:"洋楽・ロック", n:"マリオ終止", a:"♭VI–♭VII–I", m:"M", p:"bVI bVII I*2", d:"ゲーム音楽でおなじみの勝利感。"},
+ {c:"洋楽・ロック", n:"ラグタイム進行", a:"I–VI7–II7–V7", m:"M", p:"I VI7 II7 V7", d:"セブンスを連ねて戻る古き良き進行。"},
+ {c:"洋楽・ロック", n:"モンゴメリー・ワード・ブリッジ", a:"シアーズ・ローバック・ブリッジ", m:"M", p:"I7*2 IV*2 II7*2 V7*2", d:"スタンダード曲のBメロ（ブリッジ）の定型。"},
+ {c:"洋楽・ロック", n:"I Will Survive進行", a:"五度圏進行", m:"m", p:"i iv VII IIImaj7 VImaj7 iiø7 Vsus4 V", d:"4度ずつ進んで一周するマイナー進行。"},
+ // --- ブルース ---
+ {c:"ブルース", n:"12小節ブルース", a:"基本形", m:"M", p:"I7*4 IV7*2 I7*2 V7 IV7 I7 V7", d:"すべての基本になる12小節。"},
+ {c:"ブルース", n:"クイックチェンジ・ブルース", a:"2小節目でIVへ", m:"M", p:"I7 IV7 I7*2 IV7*2 I7*2 V7 IV7 I7 V7", d:"2小節目に IV7 を入れる形。"},
+ {c:"ブルース", n:"マイナーブルース", a:"", m:"m", p:"i7 iv7 i7*2 iv7*2 i7*2 VI7 V7 i7 V7", d:"マイナーの12小節。"},
+ {c:"ブルース", n:"ジャズブルース", a:"", m:"M", p:"I7 IV7 I7 v7*0.5 I7*0.5 IV7 #iv°7 I7 iii7*0.5 VI7*0.5 ii7 V7 I7*0.5 VI7*0.5 ii7*0.5 V7*0.5", d:"ツーファイブを足したジャズの12小節。"},
+ {c:"ブルース", n:"バード・ブルース", a:"Blues for Alice進行", m:"M", p:"Imaj7 viiø7*0.5 III7*0.5 vi7*0.5 II7*0.5 v7*0.5 I7*0.5 IV7 iv7*0.5 bVII7*0.5 iii7*0.5 VI7*0.5 biii7*0.5 bVI7*0.5 ii7 V7 Imaj7*0.5 VI7*0.5 ii7*0.5 V7*0.5", d:"チャーリー・パーカー流の細かいブルース。"},
+ {c:"ブルース", n:"8小節ブルース", a:"Key to the Highway型", m:"M", p:"I7 V7 IV7*2 I7 V7 I7 V7", d:"短い8小節のブルース。"},
+ // --- ジャズ ---
+ {c:"ジャズ", n:"マイナー・ツーファイブワン", a:"IIm7♭5–V7–Im", m:"m", p:"iiø7 V7b9 i7*2", d:"マイナーキーの解決。"},
+ {c:"ジャズ", n:"枯葉進行", a:"Autumn Leaves", m:"m", p:"iv7 VII7 IIImaj7 VImaj7 iiø7 V7 i*2", d:"メジャーとマイナーのツーファイブが続く。"},
+ {c:"ジャズ", n:"ターンアラウンド", a:"I–VI7–II–V", m:"M", p:"Imaj7 VI7 ii7 V7", d:"曲の頭に戻るための定型。"},
+ {c:"ジャズ", n:"リズムチェンジ（Aセクション）", a:"I Got Rhythm", m:"M", p:"Imaj7*0.5 vi7*0.5 ii7*0.5 V7*0.5 iii7*0.5 VI7*0.5 ii7*0.5 V7*0.5 I*0.5 I7*0.5 IV*0.5 iv*0.5 I*0.5 V7*0.5 I", d:"ビバップの定番フォームの前半8小節。"},
+ {c:"ジャズ", n:"リズムチェンジ（ブリッジ）", a:"III7–VI7–II7–V7", m:"M", p:"III7*2 VI7*2 II7*2 V7*2", d:"ドミナントを4度進行で連ねる。"},
+ {c:"ジャズ", n:"コルトレーン・チェンジ", a:"Giant Steps型", m:"M", p:"ii7*0.5 bIII7*0.5 bVImaj7*0.5 VII7*0.5 IIImaj7*0.5 V7*0.5 Imaj7", d:"長3度ずつ転調するツーファイブワンの置き換え。"},
+ {c:"ジャズ", n:"タッド・ダメロン・ターンアラウンド", a:"", m:"M", p:"Imaj7 bIIImaj7 bVImaj7 bIImaj7", d:"メジャーセブンスで滑り降りる。"},
+ {c:"ジャズ", n:"裏コード", a:"トライトーン代理", m:"M", p:"ii7 bII7 Imaj7*2", d:"V7 を ♭II7 に置き換える。"},
+ {c:"ジャズ", n:"バックドア進行", a:"IVm7–♭VII7–I", m:"M", p:"iv7 bVII7 Imaj7*2", d:"裏口から主和音に入る。"},
+ {c:"ジャズ", n:"ダブルドミナント", a:"ドッペルドミナント", m:"M", p:"II7 V7 I*2", d:"V7 の前にそのドミナントを置く。"},
+ {c:"ジャズ", n:"パッシング・ディミニッシュ", a:"経過ディミニッシュ", m:"M", p:"Imaj7 #i°7 ii7 #ii°7 iii7 VI7 ii7 V7", d:"ディミニッシュで半音ずつつなぐ。"},
+ {c:"ジャズ", n:"イパネマ進行", a:"ボサノバ", m:"M", p:"Imaj7*2 II7*2 ii7 bII7 Imaj7 bII7", d:"ボサノバの名曲のAメロ。"},
+ // --- クリシェ・ベースライン ---
+ {c:"クリシェ・ベースライン", n:"メジャー・クリシェ", a:"下降クリシェ", m:"M", p:"I Imaj7 I7 I6", d:"トップの音が半音ずつ下がる。"},
+ {c:"クリシェ・ベースライン", n:"上昇クリシェ", a:"オーギュメント・クリシェ", m:"M", p:"I Iaug I6 I7", d:"5度の音が半音ずつ上がる。"},
+ {c:"クリシェ・ベースライン", n:"マイナー・クリシェ", a:"My Funny Valentine型", m:"m", p:"i imM7 i7 i6", d:"マイナーコードの中で半音下降。"},
+ {c:"クリシェ・ベースライン", n:"カノン進行（ベース下降）", a:"オンコード版カノン", m:"M", p:"I V/3 vi iii/3 IV I/3 ii7 V", d:"ベースが順番に下がっていくカノン。"},
+ {c:"クリシェ・ベースライン", n:"ラメント・バス", a:"嘆きの低音", m:"m", p:"i v/3 iv/3 V", d:"ベースが主音から属音へ順に下がる。"},
+ {c:"クリシェ・ベースライン", n:"上昇ベース進行", a:"I–I/3–IV–V", m:"M", p:"I I/3 IV V", d:"ベースが上がっていく前向きな進行。"},
+ // --- マイナー・モード ---
+ {c:"マイナー・モード", n:"アンダルシア進行", a:"フラメンコ進行", m:"m", p:"i VII VI V", d:"スペイン風の下降進行。"},
+ {c:"マイナー・モード", n:"マイナーのスリーコード", a:"Im–IVm–V", m:"m", p:"i iv V i", d:"マイナーキーの基本形。"},
+ {c:"マイナー・モード", n:"エオリアン進行", a:"♭VI–♭VII–Im", m:"m", p:"VI VII i*2", d:"マイナーへ力強く上がって着地。"},
+ {c:"マイナー・モード", n:"ドリアン・ヴァンプ", a:"Im7–IV7", m:"m", p:"i7 IV7 i7 IV7", d:"ファンクやラテンの2コード。"},
+ {c:"マイナー・モード", n:"フリジアン・ヴァンプ", a:"Im–♭II", m:"m", p:"i bII i bII", d:"半音上と行き来する、妖しい響き。"},
+ {c:"マイナー・モード", n:"リディアン・ヴァンプ", a:"I–II", m:"M", p:"I II I II", d:"浮遊感のある2コード。"},
+ {c:"マイナー・モード", n:"ミクソリディアン・ヴァンプ", a:"I–♭VII", m:"M", p:"I bVII I bVII", d:"明るいのに渋い2コード。"},
+ // --- クラシック・古楽 ---
+ {c:"クラシック・古楽", n:"フォリア", a:"La Folia", m:"m", p:"i V i VII III VII i V i V i VII III VII i*0.5 V*0.5 i", d:"バロック期に流行した16小節の変奏主題。"},
+ {c:"クラシック・古楽", n:"ロマネスカ", a:"Romanesca", m:"m", p:"III VII i V III VII i*0.5 V*0.5 i", d:"ルネサンス期の定型進行。"},
+ {c:"クラシック・古楽", n:"パッサメッツォ・アンティコ", a:"Passamezzo antico", m:"m", p:"i VII i V III VII i*0.5 V*0.5 i", d:"ルネサンス舞曲の定型（短調）。"},
+ {c:"クラシック・古楽", n:"パッサメッツォ・モデルノ", a:"Passamezzo moderno", m:"M", p:"I IV I V I IV I*0.5 V*0.5 I", d:"ルネサンス舞曲の定型（長調）。"},
+ {c:"クラシック・古楽", n:"ナポリの六", a:"ナポリの和音", m:"m", p:"i bII/3 V7 i", d:"♭II の第一転回形からドミナントへ。"},
+ {c:"クラシック・古楽", n:"ピカルディ終止", a:"ピカルディの三度", m:"m", p:"i iv V I", d:"短調の曲を長調の主和音で終える。"},
+ // --- カデンツ・終止 ---
+ {c:"カデンツ・終止", n:"カデンツ第1型", a:"T–D–T / 全終止", m:"M", p:"I V7 I*2", d:"主和音→属和音→主和音。"},
+ {c:"カデンツ・終止", n:"カデンツ第2型", a:"T–S–D–T", m:"M", p:"I IV V7 I", d:"最も完全な形の終止。"},
+ {c:"カデンツ・終止", n:"カデンツ第3型", a:"T–S–T / アーメン終止（変格終止）", m:"M", p:"I IV I*2", d:"IV から主和音へ穏やかに戻る。"},
+ {c:"カデンツ・終止", n:"偽終止", a:"V7→VIm", m:"M", p:"I IV V7 vi", d:"主和音に行くと見せかけて vi へ。"},
+ {c:"カデンツ・終止", n:"半終止", a:"Vで止まる", m:"M", p:"I IV V*2", d:"属和音で止めて続きを期待させる。"},
+ // ===== 追加分 =====
+ // --- J-POP定番 ---
+ {c:"J-POP定番", n:"王道進行（解決版）", a:"4536→451", m:"M", p:"IV V iii vi IV V I*2", d:"王道進行のあと IV–V–I で着地する8小節。"},
+ {c:"J-POP定番", n:"王道進行→ツーファイブワン", a:"4536251", m:"M", p:"IVmaj7 V7 iii7 vi7 ii7 V7 Imaj7*2", d:"王道進行からツーファイブワンでなめらかに解決。"},
+ {c:"J-POP定番", n:"丸サ進行（シンプル版）", a:"IV△7–III7–VIm7–I7", m:"M", p:"IVmaj7 III7 vi7 I7", d:"1小節ずつの4コードにした丸サ進行。"},
+ {c:"J-POP定番", n:"マイナー・カノン進行", a:"短調のカノン", m:"m", p:"i v VI III iv i iv V", d:"カノン進行をマイナーキーに置き換えた形。"},
+ // --- 数字で呼ぶ進行 ---
+ {c:"数字で呼ぶ進行", n:"6251進行", a:"ロクニーゴーイチ", m:"M", p:"vi ii V I", d:"4度進行で主和音まで進む。"},
+ {c:"数字で呼ぶ進行", n:"36251進行", a:"サンロクニーゴーイチ", m:"M", p:"iii7 VI7 ii7 V7 Imaj7*2", d:"ドミナントを挟みながら4度進行で解決。"},
+ {c:"数字で呼ぶ進行", n:"1415進行", a:"", m:"M", p:"I IV I V", d:"フォークやカントリーの素朴な進行。"},
+ {c:"数字で呼ぶ進行", n:"1563進行", a:"カノン進行の前半", m:"M", p:"I V vi iii", d:"カノン進行の最初の4コード。"},
+ {c:"数字で呼ぶ進行", n:"1545進行", a:"", m:"M", p:"I V IV V", d:"V を行き来する、明るく開けた進行。"},
+ {c:"数字で呼ぶ進行", n:"4516進行", a:"", m:"M", p:"IV V I vi", d:"解決してから vi に抜ける。"},
+ {c:"数字で呼ぶ進行", n:"2345進行", a:"順次上昇", m:"M", p:"ii iii IV V", d:"ii から V まで順番に上がる。サビ前に。"},
+ {c:"数字で呼ぶ進行", n:"3456進行", a:"順次上昇", m:"M", p:"iii IV V vi", d:"iii から vi まで順番に上がる。"},
+ // --- 洋楽・ロック ---
+ {c:"洋楽・ロック", n:"Sweet Home Alabama進行", a:"V–IV–I", m:"M", p:"V IV I*2", d:"サザンロックの定番。"},
+ {c:"洋楽・ロック", n:"Don't Stop Believin'進行", a:"", m:"M", p:"I V vi IV I V iii IV", d:"1564 の後半で vi を iii に変える8小節。"},
+ {c:"洋楽・ロック", n:"Boulevard of Broken Dreams進行", a:"Im–♭III–♭VII–IV", m:"m", p:"i III VII IV", d:"マイナーなのに IV がメジャーで明るく抜ける。"},
+ {c:"洋楽・ロック", n:"朝日のあたる家進行", a:"House of the Rising Sun", m:"m", p:"i III IV VI i III V*2", d:"フォークロックの名進行。"},
+ {c:"洋楽・ロック", n:"Hey Joe進行", a:"4度上行の連続", m:"M", p:"bVI*0.5 bIII*0.5 bVII*0.5 IV*0.5 I*2", d:"メジャーコードを4度ずつ進めて主和音へ。"},
+ {c:"洋楽・ロック", n:"Wonderwall進行", a:"", m:"M", p:"vi7 I Vsus4 II7sus4", d:"sus4 を使ったブリットポップの響き。"},
+ {c:"洋楽・ロック", n:"I–IV ヴァンプ", a:"2コード", m:"M", p:"I IV I IV", d:"2つのコードを行き来するだけの定番。"},
+ {c:"洋楽・ロック", n:"I–♭III–IV進行", a:"ブルースロック", m:"M", p:"I bIII IV I", d:"♭III を使ったロックらしい力強さ。"},
+ {c:"洋楽・ロック", n:"I–II–IV–I進行", a:"", m:"M", p:"I II IV I", d:"II をメジャーにした浮遊感のある進行。"},
+ {c:"洋楽・ロック", n:"I–♭VII–♭VI–♭VII進行", a:"", m:"M", p:"I bVII bVI bVII", d:"メジャーの主和音から全音ずつ下がって戻る。"},
+ {c:"洋楽・ロック", n:"マイナー4度進行", a:"Im–IVm–♭VII–♭III", m:"m", p:"i iv VII III", d:"4度ずつ進んで平行長調に抜ける。"},
+ {c:"洋楽・ロック", n:"i–III–VII–VI進行", a:"Im–♭III–♭VII–♭VI", m:"m", p:"i III VII VI", d:"マイナーポップスでよく使われる4コード。"},
+ {c:"洋楽・ロック", n:"i–iv–VI–V進行", a:"Im–IVm–♭VI–V", m:"m", p:"i iv VI V", d:"最後の V が主和音へ強く引き戻す。"},
+ // --- ブルース ---
+ {c:"ブルース", n:"12小節ブルース（古典形）", a:"V を2小節", m:"M", p:"I7*4 IV7*2 I7*2 V7*2 I7*2", d:"9〜10小節目を V のまま通す古い形。"},
+ // --- ジャズ ---
+ {c:"ジャズ", n:"Fly Me to the Moon進行", a:"五度圏進行", m:"M", p:"vi7 ii7 V7 Imaj7 IVmaj7 viiø7 III7 vi7", d:"4度進行でキーの中を一周する。"},
+ {c:"ジャズ", n:"Take the A Train進行", a:"A列車で行こう", m:"M", p:"Imaj7*2 II7*2 ii7 V7 Imaj7*2", d:"II7 の浮いた響きが特徴の8小節。"},
+ {c:"ジャズ", n:"Satin Doll進行", a:"", m:"M", p:"ii7*0.5 V7*0.5 ii7*0.5 V7*0.5 iii7*0.5 VI7*0.5 iii7*0.5 VI7*0.5 vi7*0.5 II7*0.5 bvi7*0.5 bII7*0.5 Imaj7*2", d:"ツーファイブを連ねる8小節。"},
+ {c:"ジャズ", n:"Sunny進行", a:"", m:"m", p:"i7 III7 VImaj7 V7", d:"ソウルジャズの4コード循環。"},
+ {c:"ジャズ", n:"Blue Bossa進行", a:"", m:"m", p:"i7*2 iv7*2 iiø7 V7 i7*2 iii7 VI7 bIImaj7*2 iiø7 V7 i7*2", d:"途中で半音上のメジャーキーへ寄り道する16小節。"},
+ {c:"ジャズ", n:"マイナー・ターンアラウンド", a:"", m:"m", p:"i7 #viø7 iiø7 V7", d:"マイナーキーで曲の頭に戻る定型。"},
+ {c:"ジャズ", n:"クロマチック・ツーファイブ", a:"半音下降ツーファイブ", m:"M", p:"iii7*0.5 VI7*0.5 biii7*0.5 bVI7*0.5 ii7*0.5 V7*0.5 Imaj7", d:"ツーファイブを半音ずつ下げて解決する。"},
+ {c:"ジャズ", n:"ゴスペル進行", a:"I–I7–IV–#IV°", m:"M", p:"I*0.5 I7*0.5 IV*0.5 #iv°7*0.5 I/5*0.5 VI7*0.5 ii7*0.5 V7*0.5", d:"ベースが半音で上がっていくゴスペルの定型。"},
+ // --- クラシック・古楽 ---
+ {c:"クラシック・古楽", n:"五度圏進行（メジャー）", a:"ゼクエンツ", m:"M", p:"I IV vii° iii vi ii V I", d:"ダイアトニックコードを4度進行で一周する。"},
+ {c:"クラシック・古楽", n:"モンテ", a:"Monte", m:"M", p:"I7 IV II7 V", d:"一段ずつ上がっていく18世紀の定型。"},
+ {c:"クラシック・古楽", n:"フォンテ", a:"Fonte", m:"M", p:"VI7 ii V7 I", d:"短調から長調へ一段下がる18世紀の定型。"},
+ {c:"クラシック・古楽", n:"フリギア終止", a:"IVm6–V", m:"m", p:"i iv/3 V*2", d:"ベースが半音下がって V に着く半終止。"},
+ // --- マイナー・モード ---
+ {c:"マイナー・モード", n:"ナチュラルマイナーのスリーコード", a:"Im–IVm–Vm", m:"m", p:"i iv v i", d:"V もマイナーのまま使う素朴な形。"},
+ {c:"マイナー・モード", n:"ドリアン進行", a:"Im–IIm–♭III–IIm", m:"m", p:"i ii III ii", d:"ドリアンらしい明るさのあるマイナー。"},
+ {c:"マイナー・モード", n:"スパニッシュ・フリジアン進行", a:"I–♭II–♭III–♭II", m:"M", p:"I bII bIII bII", d:"メジャーの主和音から半音上へ。スペイン風。"},
+ // ===== ジャンル定番（テンション入りの定番形など） =====
+ {c:"ジャンル定番", n:"王道進行（9thテンション）", a:"IV△9–V7–IIIm7–VIm9", m:"M", p:"IVmaj9 V7 iii7 vi9", d:"王道進行に 9th を足した、きらびやかな形。"},
+ {c:"ジャンル定番", n:"王道進行＋パッシングディミニッシュ", a:"IV–V–#V°–VIm", m:"M", p:"IVmaj7 V7 #v°7 vi7", d:"V と VIm の間をディミニッシュで半音につなぐ。"},
+ {c:"ジャンル定番", n:"王道進行→セカンダリードミナント解決", a:"4536→251", m:"M", p:"IVmaj7 V7 iii7 VI7 ii7 V9sus4 Imaj9*2", d:"VI7 を挟んでツーファイブワンへ流れ込む8小節。"},
+ {c:"ジャンル定番", n:"丸サ進行（テンション）", a:"IV△9–III7(#9)–VIm9–Vm7–I9", m:"M", p:"IVmaj9 III7#9 vi9 v7*0.5 I9*0.5", d:"丸サ進行にテンションを足した、おしゃれで甘い形。"},
+ {c:"ジャンル定番", n:"4321進行（テンション）", a:"IV△9–IIIm7–IIm9–I△9", m:"M", p:"IVmaj9 iii7 ii9 Imaj9", d:"テンションを保ったまま順番に下がる。"},
+ {c:"ジャンル定番", n:"2345進行（テンション）", a:"IIm9–IIIm7–IV△9–V9sus4", m:"M", p:"ii9 iii7 IVmaj9 V9sus4", d:"ドロップやサビ前の盛り上げに使う上昇。"},
+ {c:"ジャンル定番", n:"4565進行", a:"IV–V–VIm–V", m:"M", p:"IV V vi V", d:"上がって戻るだけの、ドロップ向きの4コード。"},
+ {c:"ジャンル定番", n:"サブドミナントマイナー経由の下降", a:"IV△7–IVm6–IIIm7–VIm7", m:"M", p:"IVmaj7 iv6 iii7 vi7", d:"IVm6 を挟んで切なく下がる。"},
+ {c:"ジャンル定番", n:"6415進行（テンション）", a:"VIm9–IV△9–Iadd9–Vsus4", m:"M", p:"vi9 IVmaj9 Iadd9 Vsus4", d:"広がりのあるシンセコード向きの形。"},
+ {c:"ジャンル定番", n:"4156進行（テンション）", a:"IV△7–Iadd9–Vsus4–VIm7", m:"M", p:"IVmaj7 Iadd9 Vsus4 vi7", d:"sus4 と add9 で浮遊感を出した4コード。"},
+ {c:"ジャンル定番", n:"4563進行", a:"IV–V–VIm–IIIm", m:"M", p:"IVmaj7 V vi7 iii7", d:"上がってから iii に落ちる、感傷的な流れ。"},
+ {c:"ジャンル定番", n:"ジャジー251（13th）", a:"IIm9–V13–I△9–VI7(♭9)", m:"M", p:"ii9 V13 Imaj9 VI7b9", d:"テンションたっぷりのツーファイブワン循環。"},
+ {c:"ジャンル定番", n:"6251進行（テンション）", a:"VIm9–IIm9–V13–I△9", m:"M", p:"vi9 ii9 V13 Imaj9", d:"4度進行をテンションコードで。"},
+ {c:"ジャンル定番", n:"丸サ変形（II9終わり）", a:"IV△9–III7(♭9)–VIm9–II9", m:"M", p:"IVmaj9 III7b9 vi9 II9", d:"最後を II9 にして浮いたまま回す。"},
+ {c:"ジャンル定番", n:"4325進行", a:"IV△9–IIIm7–IIm9–V9sus4", m:"M", p:"IVmaj9 iii7 ii9 V9sus4", d:"下がってから sus4 のドミナントで次へつなぐ。"},
+ {c:"ジャンル定番", n:"I△7–♭VII△7 ヴァンプ", a:"2コード", m:"M", p:"Imaj7 bVIImaj7 Imaj7 bVIImaj7", d:"メジャーセブンスを全音で行き来する都会的な響き。"},
+ {c:"ジャンル定番", n:"ネオソウル循環", a:"I△9–VIm9–IIm9–V9sus4", m:"M", p:"Imaj9 vi9 ii9 V9sus4", d:"循環進行をテンションコードで柔らかく。"},
+ {c:"ジャンル定番", n:"IV△9–IIIm7–VIm9進行", a:"436", m:"M", p:"IVmaj9 iii7 vi9*2", d:"R&B でよく聴く、下がって落ち着く3コード。"},
+ {c:"ジャンル定番", n:"ii7–V7 ヴァンプ", a:"ツーファイブの繰り返し", m:"M", p:"ii7 V7 ii7 V7", d:"解決せずにツーファイブを回し続ける。"},
+ {c:"ジャンル定番", n:"i9–VI△9 ヴァンプ", a:"Im9–♭VI△9", m:"m", p:"i9 VImaj9 i9 VImaj9", d:"暗さと浮遊感が同居する2コード。"},
+ {c:"ジャンル定番", n:"i–VI ヴァンプ", a:"Im–♭VI", m:"m", p:"i VI i VI", d:"ダークなビートの定番2コード。"},
+ {c:"ジャンル定番", n:"i–iv ヴァンプ", a:"Im–IVm", m:"m", p:"i iv i iv", d:"マイナーの2コードだけで押し切る。"},
+ {c:"ジャンル定番", n:"i–♭VII ヴァンプ", a:"Im–♭VII", m:"m", p:"i VII i VII", d:"全音下と行き来する、レゲエやロックの2コード。"},
+ {c:"ジャンル定番", n:"ファンク・ヴァンプ（I7#9–IV9）", a:"", m:"M", p:"I7#9 IV9 I7#9 IV9", d:"#9 のドミナントで刻むファンクの定番。"},
+ {c:"ジャンル定番", n:"ディープハウス進行", a:"Im7–IVm7–♭VI△7–Vm7", m:"m", p:"i7 iv7 VImaj7 v7", d:"セブンスコードだけで回すクールな4コード。"},
+ {c:"ジャンル定番", n:"小室進行（sus4解決）", a:"VIm–IV–Vsus4–V–I", m:"M", p:"vi IV Vsus4*0.5 V*0.5 I", d:"V を sus4 から解決させて勢いをつける。"},
+];
+// ジャンルごとの「よく使われる進行」。名前は PROGS の n と一致させる（1つの進行が複数ジャンルに入ってよい）
+const GENRES = [
+ ["Kawaii Future Bass", ["王道進行（9thテンション）","王道進行＋パッシングディミニッシュ","王道進行→セカンダリードミナント解決","丸サ進行（テンション）","4321進行（テンション）","2345進行（テンション）","4565進行","サブドミナントマイナー経由の下降","王道進行","丸サ進行","456進行","上昇クリシェ"]],
+ ["Future Bass / Melodic Dubstep", ["6415進行（テンション）","4156進行（テンション）","4563進行","4565進行","6415進行","4156進行","456進行"]],
+ ["EDM / ハウス / トランス", ["6415進行","1564進行","小室進行","456進行","4565進行","ディープハウス進行","エオリアン進行","見張り塔進行","ドリアン・ヴァンプ"]],
+ ["Lo-fi Hip Hop / チル", ["ジャジー251（13th）","6251進行（テンション）","丸サ変形（II9終わり）","i9–VI△9 ヴァンプ","ii7–V7 ヴァンプ","4321進行（テンション）","丸サ進行","ツーファイブワン","循環進行"]],
+ ["シティポップ", ["4325進行","I△7–♭VII△7 ヴァンプ","丸サ進行","丸サ進行（シンプル版）","2536進行","王道進行→ツーファイブワン","逆循環進行","サブドミナントマイナー進行"]],
+ ["アニソン / ボカロ", ["王道進行","王道進行（III7版）","王道進行＋パッシングディミニッシュ","王道進行（解決版）","小室進行","小室進行（sus4解決）","カノン進行","456進行","丸サ進行","マリオ終止"]],
+ ["R&B / ネオソウル", ["ネオソウル循環","IV△9–IIIm7–VIm9進行","丸サ進行（テンション）","ジャジー251（13th）","4321進行（テンション）","バックドア進行","i9–VI△9 ヴァンプ"]],
+ ["Trap / Hip Hop", ["i–VI ヴァンプ","i–iv ヴァンプ","フリジアン・ヴァンプ","i9–VI△9 ヴァンプ","アンダルシア進行","i–iv–VI–V進行","マイナーのスリーコード"]],
+ ["ファンク / ディスコ", ["ファンク・ヴァンプ（I7#9–IV9）","ドリアン・ヴァンプ","Get Lucky進行","ミクソリディアン・ヴァンプ","ii7–V7 ヴァンプ"]],
+ ["ロック / パンク", ["1564進行","1545進行","スリーコード","La Bamba進行","ミクソリディアン進行","I–♭III–IV進行","見張り塔進行","6415進行"]],
+ ["メタル", ["エオリアン進行","フリジアン・ヴァンプ","アンダルシア進行","見張り塔進行","ナチュラルマイナーのスリーコード","i–III–VII–VI進行"]],
+ ["シンセウェイブ", ["エオリアン進行","見張り塔進行","6415進行","i–III–VII–VI進行","4156進行"]],
+ ["レゲエ / スカ", ["I–IV ヴァンプ","i–♭VII ヴァンプ","1564進行","スリーコード","1645進行"]],
+ ["ボサノバ / ラテン", ["イパネマ進行","Blue Bossa進行","ツーファイブワン","パッシング・ディミニッシュ","ドリアン・ヴァンプ","アンダルシア進行"]],
+ ["ゴスペル / ソウル", ["ゴスペル進行","1645進行","カデンツ第3型","ターンアラウンド","36251進行"]],
+ ["バラード", ["カノン進行","カノン進行（ベース下降）","メジャー・クリシェ","サブドミナントマイナー進行","1645進行","王道進行（解決版）"]],
+];
+if (typeof module !== "undefined") module.exports = { PROGS, GENRES, PATTERNS, buildSong, toMidi, makeZip, parseProg, useFlats, SH, FL };
+</script>
+
+<script>
+// ===================== UI =====================
+const $ = id => document.getElementById(id);
+// 調号つきのキー一覧（メジャー / 平行マイナー）
+const KEYS = [
+  [0,"C","A","#・♭×0"],[1,"D♭","B♭","♭×5"],[2,"D","B","#×2"],[3,"E♭","C","♭×3"],[4,"E","C#","#×4"],[5,"F","D","♭×1"],
+  [6,"F#","D#","#×6"],[7,"G","E","#×1"],[8,"A♭","F","♭×4"],[9,"A","F#","#×3"],[10,"B♭","G","♭×2"],[11,"B","G#","#×5"]];
+KEYS.forEach(([pc, M, m, sig]) => $("key").add(new Option(`${M}メジャー / ${m}マイナー (${sig})`, pc)));
+const INST = [
+  { gm: 0,  n: "ピアノ",             w: "triangle", a: .005, s: .22 },
+  { gm: 4,  n: "エレピ",             w: "sine",     a: .005, s: .35 },
+  { gm: 11, n: "ビブラフォン",       w: "sine",     a: .003, s: .08 },
+  { gm: 16, n: "オルガン",           w: "square",   a: .01,  s: 1,   lp: 2600 },
+  { gm: 24, n: "ナイロンギター",     w: "triangle", a: .003, s: .1 },
+  { gm: 27, n: "クリーンギター",     w: "sawtooth", a: .003, s: .12, lp: 2400 },
+  { gm: 46, n: "ハープ",             w: "triangle", a: .003, s: .06 },
+  { gm: 48, n: "ストリングス",       w: "sawtooth", a: .12,  s: .9,  lp: 2200, det: 8 },
+  { gm: 52, n: "クワイア",           w: "triangle", a: .15,  s: .9,  det: 6 },
+  { gm: 61, n: "ブラス",             w: "sawtooth", a: .04,  s: .8,  lp: 3000 },
+  { gm: 81, n: "シンセリード（ノコギリ波）", w: "sawtooth", a: .005, s: .8, lp: 5000 },
+  { gm: 89, n: "シンセパッド",       w: "sawtooth", a: .3,   s: .95, lp: 1400, det: 10 },
+];
+const BINST = [
+  { gm: 33, n: "フィンガーベース",   w: "triangle", a: .005, s: .5 },
+  { gm: 34, n: "ピックベース",       w: "sawtooth", a: .003, s: .3,  lp: 900 },
+  { gm: 32, n: "ウッドベース",       w: "triangle", a: .005, s: .15 },
+  { gm: 35, n: "フレットレスベース", w: "sine",     a: .02,  s: .7 },
+  { gm: 38, n: "シンセベース",       w: "sawtooth", a: .003, s: .8,  lp: 700 },
+  { gm: 39, n: "シンセベース（矩形波）", w: "square", a: .003, s: .8, lp: 600 },
+];
+INST.forEach((x, i) => $("inst").add(new Option(x.n, i)));
+BINST.forEach((x, i) => $("binst").add(new Option(x.n, i)));
+
+let showDeg = false, loopOn = true, current = null, groupMode = "genre"; // current = {p, m, name, el}
+const expanded = new Set();
+const keyPc = () => +$("key").value;
+const tonicOf = mode => mode === "m" ? (keyPc() + 9) % 12 : keyPc(); // マイナー基準は平行調で鳴らす
+function opts(mode){
+  return { tonic: tonicOf(mode), mode, bpm: +$("bpm").value, pattern: $("pattern").value, speed: +$("speed").value,
+    bass: $("bass").value === "1", repeat: +$("repeat").value, barsPer: +$("barsper").value,
+    chordProg: INST[+$("inst").value].gm, bassProg: BINST[+$("binst").value].gm };
+}
+// ---- 表示 ----
+const DEG = ["Ⅰ","♭Ⅱ","Ⅱ","♭Ⅲ","Ⅲ","Ⅳ","#Ⅳ","Ⅴ","♭Ⅵ","Ⅵ","♭Ⅶ","Ⅶ"];
+const QTXT = { "9sus4":"9sus4", "13":"13", "maj7":"△7", "maj9":"△9", "mM7":"m△7", "m7b5":"m7(♭5)", "7b9":"7(♭9)", "7#9":"7(#9)" };
+const flat = s => s.length > 1 && s[1] === "b" ? s[0] + "♭" : s;
+function chordText(c){
+  const q = QTXT[c.q] !== undefined ? QTXT[c.q] : c.q;
+  if (showDeg){
+    const d = pc => DEG[((pc - keyPc()) % 12 + 12) % 12];
+    return d(c.root) + q + (c.slash ? "/" + d(c.bassPc) : "");
+  }
+  return flat(c.rootName) + q + (c.slash ? "/" + flat(c.bassName) : "");
+}
+function progHTML(prog, mode){
+  return parseProg(prog, tonicOf(mode), mode).map((c, i) => {
+    const off = ((c.root - keyPc()) % 12 + 12) % 12;
+    const dia = c.ivs.every(iv => MAJ.includes((off + iv) % 12)); // キーの音だけでできているか
+    const fn = !dia ? "nd" : [0,4,9].includes(off) ? "t" : [2,5].includes(off) ? "sd" : "d";
+    return `<span class="ch ${fn}" data-i="${i}" style="--b:${Math.min(2, Math.max(.5, c.bars))}">${chordText(c)}</span>`;
+  }).join("");
+}
+const SECTIONS = [["Ⅰ始まりのコード進行", 0], ["Ⅳ始まりのコード進行", 5], ["Ⅵ始まりのコード進行", 9], ["Ⅱ始まりのコード進行", 2], ["その他のコード進行", -1]];
+function startOf(p){ // 平行メジャー基準で、最初のコードが何度か
+  const c = parseProg(p.p, p.m === "m" ? 9 : 0, p.m)[0];
+  return [0,5,9,2].includes(c.root) ? c.root : -1;
+}
+PROGS.forEach((p, i) => { p.id = i; p.start = startOf(p); });
+
+function render(){
+  const q = $("q").value.trim().toLowerCase();
+  const hit = PROGS.filter(p => !q || (p.n + p.a + p.p + p.c + p.d).toLowerCase().includes(q));
+  $("count").textContent = `${hit.length} / ${PROGS.length} 種を表示中`;
+  $("bkey").textContent = $("key").selectedOptions[0].text.replace(/ \(.*/, "");
+  const list = $("list"); list.innerHTML = "";
+  let groups;
+  if (groupMode === "start") groups = SECTIONS.map(([t, st]) => [t, hit.filter(p => p.start === st)]);
+  else if (groupMode === "cat") groups = [...new Set(PROGS.map(p => p.c))].map(c => [c, hit.filter(p => p.c === c)]);
+  else {
+    groups = GENRES.map(([g, names]) => [g, names.map(n => hit.find(p => p.n === n)).filter(Boolean)]);
+    const used = new Set(GENRES.flatMap(g => g[1]));
+    groups.push(["その他（ジャンル分けしていない進行）", hit.filter(p => !used.has(p.n))]);
+  }
+  for (const [title, items] of groups){
+    if (!items.length) continue;
+    const sec = document.createElement("details"); sec.className = "sec"; sec.open = true;
+    sec.innerHTML = `<summary><span>${title}</span><span class="n">${items.length}</span></summary>`;
+    for (const p of items){
+      const it = document.createElement("div"); it.className = "item";
+      const open = expanded.has(p.id);
+      it.innerHTML = `<div class="row">
+          <div class="name">${p.n}${p.a ? `<small>${p.a}</small>` : ""}</div>
+          <button class="prog" aria-label="${p.n}を再生">${progHTML(p.p, p.m)}</button>
+          <div class="acts">
+            <button class="icon pl" aria-label="${p.n}を再生">▶</button>
+            <button class="primary dl" aria-label="${p.n}のMIDIを保存">MIDI</button>
+            <button class="icon chev" aria-expanded="${open}" aria-label="${p.n}の詳細">${open ? "▴" : "▾"}</button>
+          </div></div>
+        <div class="detail" ${open ? "" : "hidden"}>
+          <p>${p.d}</p>
+          <p class="meta"><span>${p.c}</span><span>${p.m === "m" ? "マイナー基準" : "メジャー基準"}</span><code>${p.p}</code></p></div>`;
+      const progEl = it.querySelector(".prog");
+      const start = () => play({ p: p.p, m: p.m, name: p.n, el: progEl });
+      progEl.onclick = it.querySelector(".pl").onclick = start;
+      it.querySelector(".dl").onclick = () => download(p);
+      it.querySelector(".chev").onclick = () => { expanded.has(p.id) ? expanded.delete(p.id) : expanded.add(p.id); render(); };
+      if (current && current.id === p.id) current.el = progEl;
+      progEl.dataset.id = p.id;
+      sec.appendChild(it);
+    }
+    list.appendChild(sec);
+  }
+  renderCustom();
+}
+function renderCustom(){
+  try { $("cchords").innerHTML = progHTML($("cprog").value, $("cmode").value); $("cerr").textContent = ""; return true; }
+  catch (e){ $("cchords").innerHTML = ""; $("cerr").textContent = e.message; return false; }
+}
+// ---- 保存 ----
+function keyLabel(){ const k = KEYS[keyPc()]; return k[1].replace("♭", "b").replace("#", "s"); }
+function fileName(name){ return name.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, "") + "_" + keyLabel() + "_" + $("bpm").value + "bpm.mid"; }
+function save(bytes, name, type){
+  const url = URL.createObjectURL(new Blob([bytes], { type }));
+  const a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function download(p){ save(toMidi(buildSong(p.p, opts(p.m))), fileName(p.n), "audio/midi"); }
+// ---- 再生 ----
+let ctx = null, master = null, timers = [], raf = 0;
+function clearMarks(){ document.querySelectorAll(".ch.on").forEach(e => e.classList.remove("on")); }
+function stop(){
+  timers.forEach(clearTimeout); timers = [];
+  if (ctx){ ctx.close(); ctx = null; }
+  cancelAnimationFrame(raf); $("prog").style.width = "0";
+  clearMarks(); $("bplay").textContent = "▶";
+}
+function play(target){
+  stop();
+  current = target;
+  const pid = target.el && target.el.dataset.id;
+  current.id = pid === undefined ? null : +pid;
+  let song;
+  try { song = buildSong(target.p, Object.assign(opts(target.m), { repeat: 1 })); } catch (e){ return; }
+  $("bname").textContent = target.name; $("bplay").textContent = "■";
+  const began = performance.now() + 80, dur = song.total * (60 / song.bpm / PPQ) * 1000;
+  const tick = () => { $("prog").style.width = Math.min(100, Math.max(0, (performance.now() - began) / dur * 100)) + "%"; raf = requestAnimationFrame(tick); };
+  cancelAnimationFrame(raf); tick();
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  master = ctx.createGain(); master.gain.value = +$("vol").value * 0.3; master.connect(ctx.destination);
+  const spt = 60 / song.bpm / PPQ, t0 = ctx.currentTime + 0.08;
+  const timbres = [INST[+$("inst").value], BINST[+$("binst").value]];
+  song.tracks.forEach((tr, ti) => tr.notes.forEach(([s, d, p, v]) => {
+    const tb = timbres[ti], g = ctx.createGain();
+    const loud = tb.w === "sawtooth" || tb.w === "square" ? 0.45 : 1;
+    const a = t0 + s * spt, e = a + Math.max(0.05, d * spt), peak = v / 127 * (ti === 0 ? 0.5 : 0.9) * loud;
+    const att = Math.min(tb.a, (e - a) * 0.5);
+    g.gain.setValueAtTime(0, a); g.gain.linearRampToValueAtTime(peak, a + att);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.001, peak * tb.s), e);
+    g.gain.linearRampToValueAtTime(0, e + 0.06);
+    let out = g;
+    if (tb.lp){ const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = tb.lp; g.connect(f); out = f; }
+    out.connect(master);
+    for (const cents of tb.det ? [-tb.det, tb.det] : [0]){
+      const o = ctx.createOscillator();
+      o.type = tb.w; o.detune.value = cents; o.frequency.value = 440 * Math.pow(2, (p - 69) / 12);
+      o.connect(g); o.start(a); o.stop(e + 0.1);
+    }
+  }));
+  for (const seg of song.timeline)
+    timers.push(setTimeout(() => {
+      clearMarks();
+      const el = current && current.el;
+      if (el && el.isConnected){ const s = el.querySelector(`.ch[data-i="${seg.idx}"]`); if (s) s.classList.add("on"); }
+    }, (0.08 + seg.start * spt) * 1000));
+  timers.push(setTimeout(() => { loopOn ? play(current) : stop(); }, (0.08 + song.total * spt) * 1000));
+}
+function replayIfPlaying(){ if (ctx && current) play(current); }
+// ---- イベント ----
+$("bpm").oninput = () => { $("bpmv").value = $("bpm").value; };
+$("vol").oninput = () => { $("volv").value = $("vol").value; if (master) master.gain.value = +$("vol").value * 0.3; };
+["bpm","pattern","speed","inst","bass","binst","barsper"].forEach(id => $(id).addEventListener("change", replayIfPlaying));
+$("key").addEventListener("change", () => { render(); replayIfPlaying(); });
+function shiftKey(d){ $("key").value = ((keyPc() + d) % 12 + 12) % 12; render(); replayIfPlaying(); }
+$("kprev").onclick = () => shiftKey(-1); $("knext").onclick = () => shiftKey(1);
+function setDeg(v){ showDeg = v; $("showName").setAttribute("aria-pressed", !v); $("showDeg").setAttribute("aria-pressed", v); render(); }
+$("showName").onclick = () => setDeg(false); $("showDeg").onclick = () => setDeg(true);
+$("loop").onclick = () => { loopOn = !loopOn; $("loop").setAttribute("aria-pressed", loopOn); };
+$("stop").onclick = stop;
+$("bplay").onclick = () => { if (ctx) stop(); else if (current) play(current); else $("rand").click(); };
+$("rand").onclick = () => {
+  const els = [...document.querySelectorAll("#list .prog")];
+  if (!els.length) return;
+  const el = els[Math.floor(Math.random() * els.length)];
+  el.closest("details").open = true; el.scrollIntoView({ block: "center", behavior: "smooth" }); el.click();
+};
+$("q").addEventListener("input", render);
+$("cprog").addEventListener("input", renderCustom);
+$("cmode").addEventListener("change", renderCustom);
+const customTarget = () => ({ p: $("cprog").value, m: $("cmode").value, name: "自分の進行", el: $("cchords") });
+$("cplay").onclick = $("cchords").onclick = () => { if (renderCustom()) play(customTarget()); };
+$("cdl").onclick = () => { if (renderCustom()) save(toMidi(buildSong($("cprog").value, opts($("cmode").value))), fileName("custom"), "audio/midi"); };
+$("zip").onclick = () => {
+  const files = PROGS.map((p, i) => ({ name: String(i + 1).padStart(2, "0") + "_" + fileName(p.n), data: toMidi(buildSong(p.p, opts(p.m))) }));
+  save(makeZip(files), `chord-progressions_${keyLabel()}_${$("bpm").value}bpm.zip`, "application/zip");
+};
+$("statN").textContent = PROGS.length;
+$("statG").textContent = GENRES.length;
+document.querySelectorAll("#gm button").forEach(b => b.onclick = () => {
+  groupMode = b.dataset.g;
+  document.querySelectorAll("#gm button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  render();
+});
+$("statP").textContent = Object.keys(PATTERNS).length;
+render();
+</script>
+</body>
+</html>
