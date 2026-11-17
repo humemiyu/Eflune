@@ -65,7 +65,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible,.d
 h1{font-weight:300;font-size:clamp(32px,6vw,66px);line-height:1.14;letter-spacing:-.03em;margin:18px 0 14px}
 .lead{color:var(--muted);font-size:15px;max-width:36em;margin:0;font-weight:300}
 .card{background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);margin-bottom:16px;backdrop-filter:blur(10px)}
-.card>h2,.grp h2{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--faint);margin:0;font-weight:400;text-transform:uppercase}
+.card>h2,.grp h2,.ytside h2{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--faint);margin:0;font-weight:400;text-transform:uppercase}
 /* ---- source ---- */
 .src{display:grid;grid-template-columns:1.1fr 1fr;gap:0}
 .src .grp{padding:20px 22px;display:flex;flex-direction:column;gap:12px;min-width:0}
@@ -83,6 +83,12 @@ h1{font-weight:300;font-size:clamp(32px,6vw,66px);line-height:1.14;letter-spacin
 .meter{flex:0 0 120px;height:4px;border-radius:4px;background:var(--sunk);overflow:hidden;display:none}
 .meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#8f86ff,#ff8fc7,#6fc3ff)}
 .status.busy .meter{display:block}
+.yt{display:grid;grid-template-columns:minmax(0,340px) 1fr;gap:18px;padding:18px 22px;border-top:1px solid var(--line);align-items:center}
+.yt[hidden]{display:none}
+.ytbox{aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000}
+.ytbox iframe{width:100%;height:100%;display:block;border:0}
+.ytside{display:flex;flex-direction:column;gap:10px;min-width:0}
+.ytside b{font-weight:500;font-size:14.5px;overflow-wrap:anywhere}
 /* ---- settings ---- */
 .set{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:18px;align-items:end;padding:18px 22px}
 label.f{font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:4px;min-width:0}
@@ -123,6 +129,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:14px;font-weight:300}
   .wrap,.nav{padding:0 12px}
   .hero{padding:30px 20px 24px;border-radius:22px}
   .src{grid-template-columns:1fr} .src .grp+.grp{border-left:0;border-top:1px solid var(--line)}
+  .yt{grid-template-columns:1fr}
   .set{grid-template-columns:1fr 1fr}
   .set .btns{grid-column:1 / 3}
   .notice{padding:20px 18px 4px;border-radius:22px} .notice .cols{grid-template-columns:1fr}
@@ -142,7 +149,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:14px;font-weight:300}
     <div class="aurora" aria-hidden="true"></div>
     <span class="tag">Audio → Melody → MIDI</span>
     <h1>曲のメロディを、<br>MIDI に書き起こす。</h1>
-    <p class="lead">音声ファイル・URL・再生中のタブの音・マイクから曲を読み込み、主旋律を検出して MIDI ファイルにします。解析はすべてブラウザの中で行われます。</p>
+    <p class="lead">音声ファイル・YouTube の共有リンク・URL・再生中のタブの音・マイクから曲を読み込み、主旋律を検出して MIDI ファイルにします。解析はすべてブラウザの中で行われます。</p>
   </section>
 
   <section class="card" aria-label="曲の読み込み">
@@ -157,14 +164,23 @@ footer{color:var(--faint);font-size:11.5px;margin-top:14px;font-weight:300}
       </div>
       <div class="grp">
         <h2>URL</h2>
-        <div class="line"><input id="url" type="url" placeholder="https://example.com/song.mp3" aria-label="音声ファイルのURL"><button id="loadUrl">読み込む</button></div>
-        <p class="hint">音声ファイルへの直接リンクに対応しています。YouTube などの配信サイトは下の「タブの音を取り込む」を使ってください。</p>
+        <div class="line"><input id="url" type="url" placeholder="https://youtu.be/… または https://example.com/song.mp3" aria-label="YouTube の共有リンク、または音声ファイルのURL"><button id="loadUrl">読み込む</button></div>
+        <p class="hint">YouTube の共有リンク、または音声ファイルへの直接リンクに対応しています。そのほかの配信サイトは下の「タブの音を取り込む」を使ってください。</p>
         <h2 style="margin-top:6px">Capture / 取り込み</h2>
         <div class="line">
           <button id="capTab">タブの音を取り込む</button>
           <button id="capMic">マイクで録音</button>
         </div>
         <p class="hint">「タブの音を取り込む」は、別のタブで再生している曲をそのまま録音します（PC の Chrome / Edge。共有ダイアログで「タブの音声も共有」をオンに）。</p>
+      </div>
+    </div>
+    <div id="yt" class="yt" hidden>
+      <div id="ytBox" class="ytbox"></div>
+      <div class="ytside">
+        <h2>YouTube</h2>
+        <b id="ytTitle"></b>
+        <p class="hint">ボタンを押すと共有の確認が出るので、「このタブ」を選び「タブの音声も共有」をオンにして許可してください。動画を最初から再生しながら音を取り込み、終わると自動で解析します（曲の長さと同じ時間がかかります。PC の Chrome / Edge）。</p>
+        <div class="line"><button id="ytCap" class="primary" disabled>この動画の音を取り込む</button><button id="ytClose">閉じる</button></div>
       </div>
     </div>
     <div id="status" class="status" role="status" aria-live="polite">
@@ -232,7 +248,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:14px;font-weight:300}
       </section>
       <section>
         <h3>データの扱い</h3>
-        <p>読み込んだ音声の解析も MIDI の作成も、すべてお使いのブラウザの中で行われます。音声がサーバーに送信されることはありません（URL 読み込みは、そのURLからブラウザが直接取得します）。</p>
+        <p>読み込んだ音声の解析も MIDI の作成も、すべてお使いのブラウザの中で行われます。音声がサーバーに送信されることはありません（URL 読み込みは、そのURLからブラウザが直接取得します。YouTube は公式の埋め込みプレーヤーで再生し、その音をブラウザ内で録音します）。</p>
       </section>
       <section>
         <h3>利用上の注意</h3>
@@ -598,9 +614,14 @@ async function loadUrl(){
   const raw = $("url").value.trim();
   if (!raw || state.busy) return;
   let u;
-  try { u = new URL(raw, location.href); if (!/^https?:$/.test(u.protocol)) throw 0; }
+  try { u = new URL(/^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : "https://" + raw); if (!/^https?:$/.test(u.protocol)) throw 0; }
   catch (e){ setStatus("URL の形式が正しくありません。", "err"); return; }
-  if (/(^|\.)(youtube\.com|youtu\.be|nicovideo\.jp|spotify\.com|music\.apple\.com|soundcloud\.com)$/.test(u.hostname)){
+  const yt = parseYouTube(u);
+  if (yt){
+    if (yt.id) openYouTube(yt); else setStatus("YouTube の動画リンクとして読み取れませんでした。動画の「共有」からコピーしたリンクを貼り付けてください。", "err");
+    return;
+  }
+  if (/(^|\.)(nicovideo\.jp|spotify\.com|music\.apple\.com|soundcloud\.com)$/.test(u.hostname)){
     setStatus("配信サイトのページ URL は直接読み込めません。そのページを別のタブで再生し、「タブの音を取り込む」を使ってください。", "err"); return;
   }
   setStatus("URL から取得しています…", "busy", 0.02);
@@ -618,18 +639,84 @@ async function loadUrl(){
 $("loadUrl").onclick = loadUrl;
 $("url").onkeydown = e => { if (e.key === "Enter") loadUrl(); };
 
-// ---- タブ音声 / マイクの取り込み ----
+// ---- YouTube（埋め込みプレーヤーを再生し、このタブの音を取り込む） ----
+let ytApi = null, ytPlayer = null, ytInfo = null, ytOnEnd = null;
+function parseYouTube(u){
+  const h = u.hostname.toLowerCase().replace(/^(www|m|music)\./, "");
+  let id = null;
+  if (h === "youtu.be") id = u.pathname.split("/")[1];
+  else if (h === "youtube.com" || h === "youtube-nocookie.com"){
+    const m = u.pathname.match(/^\/(?:shorts|embed|live|v)\/([^/]+)/);
+    id = m ? m[1] : u.searchParams.get("v");
+  } else return null;
+  if (!id || !/^[\w-]{11}$/.test(id)) return { id: null };
+  const t = u.searchParams.get("t") || u.searchParams.get("start") || "", m = t.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/);
+  return { id, start: m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0 };
+}
+function loadYtApi(){
+  return ytApi || (ytApi = new Promise((ok, ng) => {
+    if (window.YT && window.YT.Player){ ok(); return; }
+    const fail = () => { ytApi = null; ng(new Error("api")); };
+    window.onYouTubeIframeAPIReady = ok;
+    const sc = document.createElement("script");
+    sc.src = "https://www.youtube.com/iframe_api"; sc.onerror = fail;
+    document.head.appendChild(sc);
+    setTimeout(() => { if (!(window.YT && window.YT.Player)) fail(); }, 15000);
+  }));
+}
+function closeYouTube(){
+  if (recorder) return;
+  if (ytPlayer){ try { ytPlayer.destroy(); } catch (e){} ytPlayer = null; }
+  $("ytBox").textContent = ""; $("yt").hidden = true;
+}
+async function openYouTube(info){
+  if (recorder || state.busy) return;
+  setStatus("YouTube のプレーヤーを読み込んでいます…", "busy", 0.02);
+  try { await loadYtApi(); }
+  catch (e){ setStatus("YouTube のプレーヤーを読み込めませんでした（通信環境や広告ブロックなどで遮断されている可能性があります）。", "err"); return; }
+  closeYouTube();
+  ytInfo = info;
+  $("yt").hidden = false; $("ytCap").disabled = true; $("ytTitle").textContent = "";
+  const holder = document.createElement("div"); holder.id = "ytPlayer"; $("ytBox").appendChild(holder);
+  ytPlayer = new YT.Player("ytPlayer", {
+    videoId: info.id, width: "100%", height: "100%", playerVars: { playsinline: 1, rel: 0, start: info.start },
+    events: {
+      onReady: () => {
+        const d = ytPlayer.getVideoData ? ytPlayer.getVideoData() : null;
+        $("ytTitle").textContent = (d && d.title) || "";
+        $("ytCap").disabled = false;
+        setStatus("動画を読み込みました。「この動画の音を取り込む」を押してください。", "");
+      },
+      onStateChange: e => { if (e.data === 0 && ytOnEnd) ytOnEnd(); },
+      onError: e => {
+        if (recorder) recorder.stop();
+        setStatus(e.data === 101 || e.data === 150 || e.data === 153
+          ? "この動画は外部サイトでの埋め込み再生が許可されていません。YouTube を別のタブで再生し、「タブの音を取り込む」を使ってください。"
+          : "この動画は再生できませんでした。リンクが正しいか確認してください。", "err");
+      }
+    }
+  });
+  $("yt").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+$("ytClose").onclick = closeYouTube;
+$("ytCap").onclick = () => capture("yt");
+
+// ---- タブ音声 / マイク / YouTube の取り込み ----
+const CAP_BTNS = { tab: "capTab", mic: "capMic", yt: "ytCap" };
 async function capture(kind){
-  const btn = $(kind === "tab" ? "capTab" : "capMic"), label = btn.textContent;
+  const btn = $(CAP_BTNS[kind]), label = btn.textContent;
   if (recorder){ recorder.stop(); return; }
-  if (state.busy) return;
+  if (state.busy || (kind === "yt" && !ytPlayer)) return;
   let stream;
   try {
     const audio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
-    if (kind === "tab"){
+    if (kind === "mic") stream = await navigator.mediaDevices.getUserMedia({ audio });
+    else {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) throw new Error("unsupported");
-      stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio });
-    } else stream = await navigator.mediaDevices.getUserMedia({ audio });
+      const opt = { video: true, audio };
+      if (kind === "yt") Object.assign(opt, { preferCurrentTab: true, selfBrowserSurface: "include", systemAudio: "exclude" });
+      stream = await navigator.mediaDevices.getDisplayMedia(opt);
+    }
   } catch (e){
     setStatus(e && e.message === "unsupported" ? "このブラウザはタブの音の取り込みに対応していません（PC の Chrome / Edge でお試しください）。"
       : "取り込みを開始できませんでした（許可されなかったか、対応していない環境です）。", "err");
@@ -642,26 +729,38 @@ async function capture(kind){
   }
   stopPlay();
   const chunks = [], began = performance.now();
+  let name = kind === "tab" ? "タブの音" : kind === "mic" ? "マイク録音" : "YouTube", total = 0;
   recorder = new MediaRecorder(new MediaStream(tracks));
   recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
-  const other = $(kind === "tab" ? "capMic" : "capTab");
+  const others = Object.values(CAP_BTNS).map($).filter(b => b !== btn);
   const timer = setInterval(() => {
     const s = (performance.now() - began) / 1000;
-    setStatus("取り込み中… " + fmt(s) + "（終わったら「取り込み終了」を押してください）", "");
+    setStatus(kind === "yt"
+      ? "取り込み中… " + fmt(s) + (total ? " / " + fmt(total) : "") + "（動画が終わると自動で解析します。途中で切り上げるときは「取り込み終了」）"
+      : "取り込み中… " + fmt(s) + "（終わったら「取り込み終了」を押してください）", "");
     if (s >= MAX_SEC && recorder) recorder.stop();
   }, 500);
   recorder.onstop = async () => {
-    clearInterval(timer); recorder = null;
+    clearInterval(timer); recorder = null; ytOnEnd = null;
     stream.getTracks().forEach(t => t.stop());
-    btn.textContent = label; btn.classList.remove("rec"); other.disabled = false;
+    if (kind === "yt" && ytPlayer){ try { ytPlayer.pauseVideo(); } catch (e){} }
+    btn.textContent = label; btn.classList.remove("rec"); others.forEach(b => { b.disabled = false; });
     const blob = new Blob(chunks, { type: chunks[0] ? chunks[0].type : "audio/webm" });
     if (!blob.size){ setStatus("音が取り込まれませんでした。", "err"); return; }
-    loadArrayBuffer(await blob.arrayBuffer(), kind === "tab" ? "タブの音" : "マイク録音");
+    loadArrayBuffer(await blob.arrayBuffer(), name);
   };
   tracks[0].addEventListener("ended", () => { if (recorder) recorder.stop(); });
   recorder.start(1000);
-  btn.textContent = "■ 取り込み終了"; btn.classList.add("rec"); other.disabled = true;
-  setStatus(kind === "tab" ? "取り込み中… 共有したタブで曲を再生してください。" : "録音中…", "");
+  btn.textContent = "■ 取り込み終了"; btn.classList.add("rec"); others.forEach(b => { b.disabled = true; });
+  if (kind === "yt"){
+    try {
+      const d = ytPlayer.getVideoData(); if (d && d.title) name = d.title;
+      total = Math.max(0, (ytPlayer.getDuration() || 0) - ytInfo.start);
+      ytOnEnd = () => { if (recorder) recorder.stop(); };
+      ytPlayer.unMute(); ytPlayer.setVolume(100); ytPlayer.seekTo(ytInfo.start, true); ytPlayer.playVideo();
+    } catch (e){}
+  }
+  setStatus(kind === "tab" ? "取り込み中… 共有したタブで曲を再生してください。" : kind === "mic" ? "録音中…" : "取り込み中… 動画を再生しています。", "");
 }
 $("capTab").onclick = () => capture("tab");
 $("capMic").onclick = () => capture("mic");
