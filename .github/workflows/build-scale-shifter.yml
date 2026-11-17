@@ -1,0 +1,66 @@
+name: Build Eflune Scale Shifter (VST3)
+
+on:
+  push:
+    paths:
+      - "ScaleShifter/**"
+      - ".github/workflows/build-scale-shifter.yml"
+    tags:
+      - "scale-shifter-v*"
+  pull_request:
+    paths:
+      - "ScaleShifter/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            configure: cmake -S ScaleShifter -B build -G "Visual Studio 17 2022" -A x64
+          - name: macOS
+            os: macos-latest
+            configure: cmake -S ScaleShifter -B build -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: ${{ matrix.configure }}
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 4
+
+      - name: Unit tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp -R "build/EfluneScaleShifter_artefacts/Release/VST3/Eflune Scale Shifter.vst3" dist/
+          cp ScaleShifter/README.md dist/README.md
+          cd dist
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            7z a "../EfluneScaleShifter-${{ matrix.name }}-VST3.zip" .
+          else
+            zip -r -y "../EfluneScaleShifter-${{ matrix.name }}-VST3.zip" .
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EfluneScaleShifter-${{ matrix.name }}-VST3
+          path: EfluneScaleShifter-${{ matrix.name }}-VST3.zip
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/scale-shifter-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: EfluneScaleShifter-${{ matrix.name }}-VST3.zip
