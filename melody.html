@@ -685,7 +685,8 @@ async function openYouTube(info){
         const d = ytPlayer.getVideoData ? ytPlayer.getVideoData() : null;
         $("ytTitle").textContent = (d && d.title) || "";
         $("ytCap").disabled = false;
-        setStatus("動画を読み込みました。「この動画の音を取り込む」を押してください。", "");
+        const blocker = displayCaptureBlocker();
+        setStatus(blocker || "動画を読み込みました。「この動画の音を取り込む」を押してください。", blocker ? "err" : "");
       },
       onStateChange: e => { if (e.data === 0 && ytOnEnd) ytOnEnd(); },
       onError: e => {
@@ -702,6 +703,28 @@ $("ytClose").onclick = closeYouTube;
 $("ytCap").onclick = () => capture("yt");
 
 // ---- タブ音声 / マイク / YouTube の取り込み ----
+// 取り込めない理由を、環境ごとに具体的に伝える
+function displayCaptureBlocker(){
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent)))
+    return "スマホ・タブレットのブラウザは、タブの音の取り込みに対応していません。PC の Chrome か Edge で開くか、曲を音声ファイルとして読み込んでください。";
+  let framed = false; try { framed = window.self !== window.top; } catch (e){ framed = true; }
+  const fp = document.featurePolicy || document.permissionsPolicy;
+  if (framed || (fp && fp.allowsFeature && !fp.allowsFeature("display-capture")))
+    return "このページがアプリ内のプレビューや埋め込み表示の中で開かれているため、タブの音を取り込めません。PC の Chrome か Edge で、このページを直接（通常のタブで）開いてください。";
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia)
+    return "このブラウザはタブの音の取り込みに対応していません。PC の Chrome か Edge でお試しください。";
+  return null;
+}
+function captureError(kind, e){
+  const name = (e && e.name) || "";
+  if (kind === "mic")
+    return name === "NotFoundError" ? "マイクが見つかりませんでした。" : "マイクを使えませんでした。ブラウザのアドレスバーからマイクの使用を許可してください。";
+  const blocker = displayCaptureBlocker();
+  if (blocker) return blocker;
+  if (name === "NotAllowedError")
+    return "共有が許可されませんでした。もう一度ボタンを押し、確認画面で" + (kind === "yt" ? "「このタブ」" : "曲を再生しているタブ") + "を選んで「タブの音声も共有」をオンにし、「共有」を押してください（Mac でダイアログが出ない場合は、システム設定 → プライバシーとセキュリティ → 画面収録 でブラウザを許可してください）。";
+  return "取り込みを開始できませんでした（" + (name || "不明なエラー") + "）。PC の Chrome か Edge の最新版でお試しください。";
+}
 const CAP_BTNS = { tab: "capTab", mic: "capMic", yt: "ytCap" };
 async function capture(kind){
   const btn = $(CAP_BTNS[kind]), label = btn.textContent;
@@ -712,14 +735,13 @@ async function capture(kind){
     const audio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
     if (kind === "mic") stream = await navigator.mediaDevices.getUserMedia({ audio });
     else {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) throw new Error("unsupported");
+      if (displayCaptureBlocker()) throw new Error("blocked");
       const opt = { video: true, audio };
       if (kind === "yt") Object.assign(opt, { preferCurrentTab: true, selfBrowserSurface: "include", systemAudio: "exclude" });
       stream = await navigator.mediaDevices.getDisplayMedia(opt);
     }
   } catch (e){
-    setStatus(e && e.message === "unsupported" ? "このブラウザはタブの音の取り込みに対応していません（PC の Chrome / Edge でお試しください）。"
-      : "取り込みを開始できませんでした（許可されなかったか、対応していない環境です）。", "err");
+    setStatus(captureError(kind, e), "err");
     return;
   }
   const tracks = stream.getAudioTracks();
