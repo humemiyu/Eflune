@@ -64,7 +64,7 @@ button.chev .ico{transition:transform .2s cubic-bezier(.2,.7,.2,1)} button.chev[
 button.saved,button.saved:hover{background:var(--sd-bg);color:var(--sd-ink);border-color:var(--sd-bg);opacity:1}
 button.dl.saved,button.dl.saved:hover{background:var(--sd-bg);color:var(--sd-ink);border-color:var(--sd-bg)}
 button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-.tag{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);
+.tag{display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
   border:1px solid var(--line2);border-radius:999px;padding:4px 12px;background:var(--sunk)}
 /* ---- hero ---- */
 .hero{position:relative;overflow:hidden;border-radius:28px;border:1px solid var(--line);margin:18px 0 20px;padding:44px 36px 34px;background:var(--card);box-shadow:var(--shadow)}
@@ -73,13 +73,13 @@ h1{font-weight:300;font-size:clamp(34px,6.4vw,72px);line-height:1.12;letter-spac
 .lead{color:var(--muted);font-size:15px;max-width:34em;margin:0 0 30px;font-weight:300}
 .stats{display:flex;gap:38px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:20px}
 .stats b{display:block;font-weight:300;font-size:34px;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
-.stats span{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+.stats span{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--faint);text-transform:uppercase}
 /* ---- settings ---- */
 .panel{background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);margin-bottom:16px;
   display:grid;grid-template-columns:1.5fr 1fr 1fr;backdrop-filter:blur(10px)}
 .grp{padding:20px 22px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:12px;min-width:0}
 .grp:first-child{border-left:0}
-.grp h2{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--faint);margin:0;font-weight:400;text-transform:uppercase}
+.grp h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;color:var(--faint);margin:0;font-weight:400;text-transform:uppercase}
 .sl{display:grid;grid-template-columns:3.4em 1fr 2.8em;gap:10px;align-items:center;font-size:12px;color:var(--muted)}
 .sl output{color:var(--ink);font-weight:300;font-size:20px;letter-spacing:-.02em;text-align:right;font-variant-numeric:tabular-nums}
 input[type=range]{width:100%;accent-color:var(--ink);min-width:0;height:22px}
@@ -199,20 +199,20 @@ footer{color:var(--faint);font-size:11.5px;margin-top:14px;font-weight:300}
 <div class="wrap">
   <section class="hero">
     <div class="aurora" aria-hidden="true"></div>
-    <span class="tag">Chord progression → MIDI</span>
+    <span class="tag">コード進行 → MIDI</span>
     <h1>コード進行を、<br>ボタン一つで MIDI に。</h1>
     <p class="lead">名前の付いたコード進行の一覧です。コードを押すと再生、「MIDI」ボタンでそのまま MIDI ファイルを保存できます。</p>
     <div class="stats">
-      <div><b id="statN">75</b><span>progressions</span></div>
-      <div><b id="statG">16</b><span>genres</span></div>
-      <div><b>12</b><span>keys</span></div>
-      <div><b id="statP">11</b><span>patterns</span></div>
+      <div><b id="statN">75</b><span>進行</span></div>
+      <div><b id="statG">16</b><span>ジャンル</span></div>
+      <div><b>12</b><span>キー</span></div>
+      <div><b id="statP">11</b><span>伴奏パターン</span></div>
     </div>
   </section>
 
   <section class="panel" aria-label="設定">
     <div class="grp">
-      <h2>Playback / 再生</h2>
+      <h2>再生</h2>
       <div class="sl"><span>BPM</span><input id="bpm" type="range" min="40" max="240" value="120" aria-label="BPM"><output id="bpmv">120</output></div>
       <div class="sl"><span>音量</span><input id="vol" type="range" min="0" max="1" step="0.05" value="0.6" aria-label="音量"><output id="volv">0.6</output></div>
       <div class="two">
@@ -230,7 +230,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:14px;font-weight:300}
       </div>
     </div>
     <div class="grp">
-      <h2>Sound / 音色</h2>
+      <h2>音色</h2>
       <label class="f">コード<select id="inst"></select></label>
       <div class="two">
         <label class="f">ベース<select id="bass"><option value="1">あり</option><option value="0">なし</option></select></label>
@@ -238,7 +238,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:14px;font-weight:300}
       </div>
     </div>
     <div class="grp">
-      <h2>Export / MIDI出力</h2>
+      <h2>MIDI出力</h2>
       <div class="two">
         <label class="f">1コードの長さ<select id="barsper"><option value="1">1小節</option><option value="2">2小節</option><option value="0.5">半小節</option></select></label>
         <label class="f">繰り返し<select id="repeat"><option value="1">1回</option><option value="2">2回</option><option value="4">4回</option></select></label>
@@ -273,7 +273,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:14px;font-weight:300}
   <p class="count" id="count" role="status" aria-live="polite" aria-atomic="true"></p>
   <div id="list"></div>
   <section class="notice" id="notice" aria-labelledby="noticeTitle">
-    <span class="tag">Notice</span>
+    <span class="tag">お知らせ</span>
     <h2 id="noticeTitle">ご利用にあたって</h2>
     <div class="cols">
       <section>
@@ -714,14 +714,14 @@ const PROGS = [
 ];
 // ジャンルごとの「よく使われる進行」。名前は PROGS の n と一致させる（1つの進行が複数ジャンルに入ってよい）
 const GENRES = [
- ["Kawaii Future Bass", ["王道進行（9thテンション）","王道進行＋パッシングディミニッシュ","王道進行→セカンダリードミナント解決","丸サ進行（テンション）","4321進行（テンション）","2345進行（テンション）","4565進行","サブドミナントマイナー経由の下降","王道進行","丸サ進行","456進行","上昇クリシェ"]],
- ["Future Bass / Melodic Dubstep", ["6415進行（テンション）","4156進行（テンション）","4563進行","4565進行","6415進行","4156進行","456進行"]],
+ ["カワイイ・フューチャーベース", ["王道進行（9thテンション）","王道進行＋パッシングディミニッシュ","王道進行→セカンダリードミナント解決","丸サ進行（テンション）","4321進行（テンション）","2345進行（テンション）","4565進行","サブドミナントマイナー経由の下降","王道進行","丸サ進行","456進行","上昇クリシェ"]],
+ ["フューチャーベース / メロディック・ダブステップ", ["6415進行（テンション）","4156進行（テンション）","4563進行","4565進行","6415進行","4156進行","456進行"]],
  ["EDM / ハウス / トランス", ["6415進行","1564進行","小室進行","456進行","4565進行","ディープハウス進行","エオリアン進行","見張り塔進行","ドリアン・ヴァンプ"]],
- ["Lo-fi Hip Hop / チル", ["ジャジー251（13th）","6251進行（テンション）","丸サ変形（II9終わり）","i9–VI△9 ヴァンプ","ii7–V7 ヴァンプ","4321進行（テンション）","丸サ進行","ツーファイブワン","循環進行"]],
+ ["Lo-fi ヒップホップ / チル", ["ジャジー251（13th）","6251進行（テンション）","丸サ変形（II9終わり）","i9–VI△9 ヴァンプ","ii7–V7 ヴァンプ","4321進行（テンション）","丸サ進行","ツーファイブワン","循環進行"]],
  ["シティポップ", ["4325進行","I△7–♭VII△7 ヴァンプ","丸サ進行","丸サ進行（シンプル版）","2536進行","王道進行→ツーファイブワン","逆循環進行","サブドミナントマイナー進行"]],
  ["アニソン / ボカロ", ["王道進行","王道進行（III7版）","王道進行＋パッシングディミニッシュ","王道進行（解決版）","小室進行","小室進行（sus4解決）","カノン進行","456進行","丸サ進行","マリオ終止"]],
  ["R&B / ネオソウル", ["ネオソウル循環","IV△9–IIIm7–VIm9進行","丸サ進行（テンション）","ジャジー251（13th）","4321進行（テンション）","バックドア進行","i9–VI△9 ヴァンプ"]],
- ["Trap / Hip Hop", ["i–VI ヴァンプ","i–iv ヴァンプ","フリジアン・ヴァンプ","i9–VI△9 ヴァンプ","アンダルシア進行","i–iv–VI–V進行","マイナーのスリーコード"]],
+ ["トラップ / ヒップホップ", ["i–VI ヴァンプ","i–iv ヴァンプ","フリジアン・ヴァンプ","i9–VI△9 ヴァンプ","アンダルシア進行","i–iv–VI–V進行","マイナーのスリーコード"]],
  ["ファンク / ディスコ", ["ファンク・ヴァンプ（I7#9–IV9）","ドリアン・ヴァンプ","Get Lucky進行","ミクソリディアン・ヴァンプ","ii7–V7 ヴァンプ"]],
  ["ロック / パンク", ["1564進行","1545進行","スリーコード","La Bamba進行","ミクソリディアン進行","I–♭III–IV進行","見張り塔進行","6415進行"]],
  ["メタル", ["エオリアン進行","フリジアン・ヴァンプ","アンダルシア進行","見張り塔進行","ナチュラルマイナーのスリーコード","i–III–VII–VI進行"]],
